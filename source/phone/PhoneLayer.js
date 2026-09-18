@@ -226,6 +226,20 @@ if (window.__atlasPhone) {
         return true;
     };
 
+    /* Swallow every tap for inMs, then get out of the way. */
+    function phoneShieldTaps(inMs) {
+        var shield = document.createElement("div");
+        shield.setAttribute("class", "atlas-phone-tap-shield");
+        shield.style.cssText = "position:fixed;left:0;top:0;right:0;bottom:0;z-index:2147483000;background:transparent;";
+        function eat(ev) { ev.stopPropagation(); ev.preventDefault(); }
+        var names = ["mousedown", "mouseup", "click", "touchstart", "touchend"];
+        for (var i = 0; i < names.length; i++) { shield.addEventListener(names[i], eat, true); }
+        document.body.appendChild(shield);
+        setTimeout(function () {
+            try { if (shield.parentNode) { shield.parentNode.removeChild(shield); } } catch (e) {}
+        }, inMs);
+    }
+
     appProto.phoneShowMenu = function () {
         var menu = this.$ && this.$.appMenu;
         if (!menu) { return true; }
@@ -235,6 +249,17 @@ if (window.__atlasPhone) {
          * the one moment $.printMenuItem & co. exist. Called any earlier it throws on undefined, and
          * because it is also what arms _menuArmed, a throw there would leave half the menu dead. */
         menu.open();
+        /* Shield the screen for a moment. LunaCE follows a tap with a synthesised mouse click, and
+         * that click lands on whatever is under it once the menu has opened - the AppMenu opens
+         * top-left, and document.elementFromPoint(2,2) is its first item, so tapping the hamburger
+         * sometimes ran "Find on Page" instead of showing a menu. The tap guard cannot help: this is a
+         * DOM click on a different control, not the button firing twice.
+         *
+         * A shield rather than pointer-events:none on the menu, which only makes the menu transparent
+         * to hit testing - the stray click then passes THROUGH to whatever is beneath (measured: the
+         * url pill, which opened the address editor and dismissed the menu). Nothing gets through this
+         * one; it simply eats the first clicks and removes itself. */
+        phoneShieldTaps(400);
         return true;
     };
 
