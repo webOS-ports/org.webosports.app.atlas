@@ -286,6 +286,10 @@ enyo.kind({
                 }
                 return;
             }
+            // This view has now committed a real page of its own. Until that happens it is still on
+            // the about:blank it was born with, and any icon announced in that window belongs to
+            // whatever put it there - see onFavicons.
+            if (!self.isBlank(u)) { self._navigated = true; }
             if (u && u !== self.url) {
                 // NOT doUrlRedirected: BrowserApp maps that event to openResource, which asks the
                 // system to open the URL in the default handler. On WPE it only fires for a scheme the
@@ -411,17 +415,31 @@ enyo.kind({
             }
             if (area > bestArea) { bestArea = area; best = f.url; }
         }
+        /* Ignore icons announced before this view has committed a page of its own. A brand-new tab is
+         * created on about:blank, and an icon arriving in that window is the previous page's, not the
+         * one about to load: that is how a fresh nu.nl tab came to store tweakers.net's icon. The
+         * engine's own url cannot be used to tell them apart - it reads about:blank for a suspended
+         * background tab and sometimes an ad frame's url for a live one - but "has this view ever
+         * committed a page" is unambiguous, and a page always commits before it announces an icon. */
+        if (!this._navigated) { return; }
         if (best) {
             this.faviconUrl = best;
-            // Remember WHICH page announced it. Without this a stale icon outlives its page: a tab
-            // showing telegraaf.nl kept wearing tweakers.net's icon.
+            /* Remember which page announced it, taken from the ENGINE rather than from Atlas's own
+             * this.url. The two differ exactly when it matters: this.url is set optimistically to what
+             * was asked for ("nu.nl") the moment a load starts, while a brand-new tab is still sitting
+             * on the about:blank it was born with — and an icon announced in that window belongs to
+             * whatever that page is, not to the site about to load. Recording it against this.url is
+             * how a fresh nu.nl tab ended up storing tweakers.net's icon with forUrl "nu.nl". */
             this.faviconForUrl = this.url || "";
         }
     },
 
-    /* The icon, but only if it belongs to the page this view is actually showing. Compared by host:
-     * Atlas's url may be what the user typed ("telegraaf.nl") while the committed page is
-     * https://www.telegraaf.nl/, and a site's icon often lives on a different path of the same site. */
+    /* The icon, but only if it belongs to the page this view is showing.
+     *
+     * Matched by host against Atlas's url, which unlike the engine's survives a background tab being
+     * suspended to about:blank and so keeps the icon in the tab list. Host rather than exact url:
+     * Atlas's url may be what the user typed against a committed https://www. form, and a site's icon
+     * commonly lives elsewhere on the same site. */
     getFavicon: function () {
         if (!this.faviconUrl || !this.faviconForUrl) { return ""; }
         var a = this.hostOfUrl(this.faviconForUrl), b = this.hostOfUrl(this.url);
