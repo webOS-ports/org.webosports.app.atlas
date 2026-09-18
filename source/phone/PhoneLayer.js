@@ -148,7 +148,8 @@ if (window.__atlasPhone) {
                 // name is the tab's identity and the switcher keys its rows on it, so that closing
                 // one tab cannot be mistaken for closing the one that takes its place.
                 name: tabs[i].name, title: tabs[i].title, url: tabs[i].url,
-                favicon: (wv && wv.faviconUrl) || ""
+                // getFavicon withholds an icon that belongs to a page this tab has left.
+                favicon: (wv && wv.getFavicon && wv.getFavicon()) || ""
             });
         }
         sw.setActiveIndex(this.atlasActive || 0);

@@ -238,7 +238,11 @@ enyo.kind({
         on("dom-ready", function () { self.installInputBridge(); });
         on("did-start-loading", function () {
             self.loading = true;
-            self.faviconUrl = "";        // the old page's icon must not survive into the new one
+            /* Deliberately NOT clearing the favicon here. did-start-loading fires for sub-frame loads
+             * too - ad and tracker frames keep firing it long after the page itself is up - and each
+             * one wiped a perfectly good icon: nu.nl announced its icon three times and the tab still
+             * ended with none. The icon is tied to the page it belongs to instead (see onFavicons and
+             * getFavicon), which handles the stale case without needing to guess when to clear. */
             self.doLoadStarted();
         });
         /* The event is "load-progress-changed" (browser_shell_page_contents.cc, both the 108 and 120
@@ -407,7 +411,27 @@ enyo.kind({
             }
             if (area > bestArea) { bestArea = area; best = f.url; }
         }
-        if (best) { this.faviconUrl = best; }
+        if (best) {
+            this.faviconUrl = best;
+            // Remember WHICH page announced it. Without this a stale icon outlives its page: a tab
+            // showing telegraaf.nl kept wearing tweakers.net's icon.
+            this.faviconForUrl = this.url || "";
+        }
+    },
+
+    /* The icon, but only if it belongs to the page this view is actually showing. Compared by host:
+     * Atlas's url may be what the user typed ("telegraaf.nl") while the committed page is
+     * https://www.telegraaf.nl/, and a site's icon often lives on a different path of the same site. */
+    getFavicon: function () {
+        if (!this.faviconUrl || !this.faviconForUrl) { return ""; }
+        var a = this.hostOfUrl(this.faviconForUrl), b = this.hostOfUrl(this.url);
+        if (!a || !b) { return ""; }
+        return (a === b) ? this.faviconUrl : "";
+    },
+    hostOfUrl: function (inUrl) {
+        var u = String(inUrl || "").replace(/^[a-z][a-z0-9+.-]*:\/\//i, "");
+        u = u.split("/")[0].split("?")[0].split("#")[0];
+        return u.replace(/^www\./i, "").toLowerCase();
     },
 
     /* Route a camera/mic request through Atlas's confirm dialog. pendingDialog is a single slot, so a
