@@ -144,7 +144,16 @@ enyo.kind({
     proto.atlasView = function (tab) {
         if (!tab) { return null; }
         if (tab.view) { return tab.view; }
-        var v = tab.name ? this.$[tab.name] : null;
+        if (!tab.name) { return null; }
+        /* The name "browser" identifies this tab ONLY while it is the active one. atlasSelectIndex
+         * re-points this.$.browser at whichever tab is active, so resolving tab 0 by name at any other
+         * time hands back a different tab's view — and the line below would then cache that wrong view
+         * on tab 0 for good. It is easy to hit: the app opens on the start page, so tab 0's view is
+         * still lazy when a second tab is created, and tab 0 ends up permanently bound to it. That
+         * showed up as the tab list wearing the wrong favicons, one row off. */
+        if (tab.name === "browser" &&
+            (this.atlasTabs || [])[this.atlasActive || 0] !== tab) { return null; }
+        var v = this.$[tab.name];
         if (v) { tab.view = v; }
         return v;
     };
