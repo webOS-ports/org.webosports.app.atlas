@@ -59,16 +59,16 @@ enyo.kind({
     /* Every button goes through atlasPhoneTap (PhoneTap.js): LunaCE fires touch AND a synthesised
      * click for one tap, so binding onclick straight to a do* event doubles every action. */
     backClick: function() {
-        return atlasPhoneTap(this, this.doBack);
+        return atlasPhoneTap(this, "back", this.doBack);
     },
     forwardClick: function() {
-        return atlasPhoneTap(this, this.doForward);
+        return atlasPhoneTap(this, "forward", this.doForward);
     },
     tabsClick: function() {
-        return atlasPhoneTap(this, this.doTabs);
+        return atlasPhoneTap(this, "tabs", this.doTabs);
     },
     menuClick: function() {
-        return atlasPhoneTap(this, this.doMenu);
+        return atlasPhoneTap(this, "menu", this.doMenu);
     },
     /* Back is never disabled: with no page history it closes the tab/card, which is what Back means
      * on webOS (see Browser.goBack). Forward is disabled when there is nowhere to go, so the bar

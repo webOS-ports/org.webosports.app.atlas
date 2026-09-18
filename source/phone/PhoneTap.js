@@ -6,19 +6,25 @@
  * guards it with a one-shot _menuArmed flag armed in toggleAppMenuItems (BrowserApp.js), but that
  * relies on there being a per-open moment to arm; a plain toolbar button has none.
  *
- * So: ignore a repeat of the same action inside a short window. A window rather than a strict one-shot
- * so that deliberate repeat taps (next, next, next) still work.
+ * So: ignore a repeat of the SAME action inside a short window — a window rather than a strict
+ * one-shot, so deliberate repeat taps (next, next, next) still work.
+ *
+ * The key is what makes it per-action rather than per-control-owner. Keying by owner alone is wrong
+ * and was: tapping New Tab and then Done in the tab switcher swallowed Done, because a different
+ * button on the same owner looked like the same tap repeated. Rows include their index in the key for
+ * the same reason — closing two tabs in quick succession is two actions, not one repeated.
  *
  * Every tappable control in source/phone/ MUST go through this rather than binding onclick directly
  * to a do* event. Usage:
  *
  *     {name: "tabs", kind: "ToolButton", onclick: "tabsClick"}
- *     tabsClick: function() { return atlasPhoneTap(this, this.doTabs); }
+ *     tabsClick: function() { return atlasPhoneTap(this, "tabs", this.doTabs); }
  */
-window.atlasPhoneTap = function (inOwner, inFire, inArgs) {
+window.atlasPhoneTap = function (inOwner, inKey, inFire, inArgs) {
     var now = (new Date()).getTime();
-    if (now - (inOwner._atlasLastTapMs || 0) < 600) { return true; }
-    inOwner._atlasLastTapMs = now;
+    var seen = inOwner._atlasTapAt || (inOwner._atlasTapAt = {});
+    if (now - (seen[inKey] || 0) < 600) { return true; }
+    seen[inKey] = now;
     inFire.apply(inOwner, inArgs || []);
     return true;
 };

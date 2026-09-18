@@ -182,8 +182,14 @@ if (window.__atlasPhone) {
         return true;
     };
 
+    /* Done: back to the page. atlasSelectIndex silently returns if the index is out of range, which
+     * would leave the switcher up with a dead button, so the index is clamped to the tab list first. */
     appProto.phoneCloseTabs = function () {
-        this.atlasSelectIndex(this.atlasActive || 0);
+        var tabs = this.atlasTabs || [];
+        var i = this.atlasActive || 0;
+        if (i < 0 || i >= tabs.length) { i = tabs.length - 1; }
+        if (i >= 0) { this.atlasSelectIndex(i); }
+        else { this.$.pane.selectViewByName("browser"); }
         return true;
     };
 

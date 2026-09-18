@@ -102,13 +102,13 @@ enyo.kind({
     rowClick: function(inSender) {
         var i = this.phoneRowIndex(inSender && inSender.index);
         if (i === null) { return true; }
-        return atlasPhoneTap(this, this.doSelectTab, [i]);
+        return atlasPhoneTap(this, "select:" + i, this.doSelectTab, [i]);
     },
     closeRow: function(inSender, inIndex) {
         var i = this.phoneRowIndex(typeof inIndex === "number" ? inIndex
                                                                : (inSender && inSender.index));
         if (i === null) { return true; }
-        return atlasPhoneTap(this, this.doCloseTab, [i]);
+        return atlasPhoneTap(this, "close:" + i, this.doCloseTab, [i]);
     },
     /* Refuse to act on an index the tab bookkeeping would mis-handle rather than pass it on: see the
      * splice(undefined, 1) note at the top of this file. */
@@ -121,9 +121,9 @@ enyo.kind({
         return inIndex;
     },
     newTabClick: function() {
-        return atlasPhoneTap(this, this.doNewTab);
+        return atlasPhoneTap(this, "newTab", this.doNewTab);
     },
     doneClick: function() {
-        return atlasPhoneTap(this, this.doClose);
+        return atlasPhoneTap(this, "done", this.doClose);
     }
 });
