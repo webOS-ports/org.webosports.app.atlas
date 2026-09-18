@@ -126,9 +126,36 @@ if (window.__atlasPhone) {
         /* Select FIRST, then fill. The view is lazy, so on the very first open it does not exist yet
          * and syncing before selecting silently populated nothing — the switcher came up empty and
          * only worked the second time it was opened. */
+        this.phoneSetTabsPainting(false);
         this.$.pane.selectViewByName("phoneTabs");
         this.phoneSyncTabSwitcher();
         return true;
+    };
+
+    /* Stop (or resume) the tab page views painting.
+     *
+     * A page view is a NATIVE view the shell composites ABOVE the UI page, so it does not disappear
+     * just because Atlas switched the Pane to another view: enyo's `showing` is per control, and the
+     * placeholder inside the hidden Browser view keeps its own showing:true, so nothing ever tells the
+     * shell to stop drawing. The page then sits on top of the tab switcher - intermittently, since it
+     * depends on whether anything else happened to re-push bounds. setOverlayHidden is the same lever
+     * ChromiumOverlay pulls for popups: the page keeps running, only its pixels go away. */
+    appProto.phoneSetTabsPainting = function (painting) {
+        var tabs = this.atlasTabs || [], active = this.atlasActive || 0;
+        for (var i = 0; i < tabs.length; i++) {
+            var v = this.atlasView(tabs[i]);
+            var wv = v && v.$ && v.$.view;
+            if (!wv || !wv.setOverlayHidden) { continue; }
+            /* Clear the flag on EVERY tab, including background ones: it gates setEngineActive, so a
+             * tab left flagged would come up blank the next time it is selected. */
+            wv.setOverlayHidden(!painting);
+            /* But setOverlayHidden(false) shows a view again purely on its own `showing`, which stays
+             * true for a background tab (that is the same per-control quirk that caused this bug), so
+             * restoring would let a background page paint over the active one. Put them back down. */
+            if (painting && i !== active && wv.pageView) {
+                try { wv.pageView.setVisible(false); } catch (e) {}
+            }
+        }
     };
 
     appProto.phoneSyncTabSwitcher = function () {
@@ -157,6 +184,7 @@ if (window.__atlasPhone) {
     };
 
     appProto.phoneSelectTab = function (inSender, inIndex) {
+        this.phoneSetTabsPainting(true);
         this.atlasSelectIndex(inIndex);      // re-selects the browser view, so the switcher closes itself
         return true;
     };
@@ -181,6 +209,7 @@ if (window.__atlasPhone) {
     };
 
     appProto.phoneNewTab = function () {
+        this.phoneSetTabsPainting(true);
         this.atlasNewTab();                  // selects the new tab, which leaves the switcher
         return true;
     };
@@ -188,6 +217,7 @@ if (window.__atlasPhone) {
     /* Done: back to the page. atlasSelectIndex silently returns if the index is out of range, which
      * would leave the switcher up with a dead button, so the index is clamped to the tab list first. */
     appProto.phoneCloseTabs = function () {
+        this.phoneSetTabsPainting(true);
         var tabs = this.atlasTabs || [];
         var i = this.atlasActive || 0;
         if (i < 0 || i >= tabs.length) { i = tabs.length - 1; }
@@ -206,6 +236,15 @@ if (window.__atlasPhone) {
          * because it is also what arms _menuArmed, a throw there would leave half the menu dead. */
         menu.open();
         return true;
+    };
+
+    /* Whatever route leads back to a page - tapping a row, New Tab, Done, or the system back gesture
+     * unwinding the Pane - ends here, so this is the one place that has to put the pixels back. Doing
+     * it only on the buttons left the page blank after a back gesture. */
+    var origBrowserShown = appProto.browserShown;
+    appProto.browserShown = function () {
+        this.phoneSetTabsPainting(true);
+        return origBrowserShown.apply(this, arguments);
     };
 
     // ---------------------------------------------------------------------------------------------
