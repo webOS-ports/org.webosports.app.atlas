@@ -2,33 +2,30 @@
  *
  * On the TouchPad the tabs live in a 34px strip along the top. At 450 css px that strip gives each tab
  * ~90px — unreadable and untappable — and it costs height permanently, so the phone hides it and puts
- * the count in the bottom bar instead. This is the screen that count opens: one row per tab, closed by
- * swiping the row aside and confirming, exactly as a bookmark, a history entry or a password is
- * deleted elsewhere in the app (SwipeableItem + onConfirm, see BookmarkList.js:36). Captioned "Close"
- * rather than "Delete": a tab is being closed, not data destroyed.
+ * the count in the bottom bar instead. This is the screen that count opens: one row per tab, each with
+ * an X to close it.
  *
  * It is also the closest thing to how webOS actually worked: the phone browser had no tab UI at all,
  * because every page was a card and the card switcher WAS this screen.
+ *
+ * Closing is ONE TAP on the X, deliberately not the swipe-and-confirm that deletes a bookmark or a
+ * password elsewhere in the app. That gesture is right for destroying data, where the confirm step
+ * earns its keep; closing a tab is cheap and frequent, and two steps for it felt as long in use as it
+ * sounds here.
  *
  * Emits the same three events AtlasTabStrip does (onSelectTab / onCloseTab / onNewTab, each carrying a
  * tab index), so PhoneLayer wires it to TabLayer's existing atlasSelectTab / atlasCloseTab /
  * atlasNewTab and no tab bookkeeping is duplicated here.
  *
- * ROWS ARE REAL COMPONENTS — one SwipeableItem per tab, rebuilt when the tab list changes — and not
- * flyweight rows in a VirtualRepeater. Both reasons were measured on device:
- *
- *   - A SwipeableItem does not render AT ALL as a VirtualRepeater row: the repeater's RowServer
- *     flyweight and the swipeable's own confirm chrome do not compose, and the list came out empty.
- *     The lists that do this elsewhere in Atlas sit inside DbList, a real list kind.
- *   - SwipeableItem reports the swiped row as `this.index`, which list kinds set on their rows and the
- *     flyweight does not — so the index arrived undefined. That is dangerous, not just broken:
- *     TabLayer.atlasCloseTab guards with `inIndex < 0 || inIndex >= tabs.length` and BOTH comparisons
- *     are false for undefined, so the bad index sails past the guard and `tabs.splice(undefined, 1)`
- *     silently closes tab 0 — the wrong tab — before Math.min(undefined, ...) yields a NaN that
- *     crashes atlasSelectIndex.
- *
- * A real instance per row owns its own index, which makes that class of bug impossible, and with a
- * handful of tabs there is nothing for a flyweight to save.
+ * ROWS ARE REAL COMPONENTS — one per tab, rebuilt when the tab list changes — and not flyweight rows
+ * in a VirtualRepeater, which is worth keeping that way: a swipeable row does not render at all as a
+ * repeater row (the RowServer flyweight and the swipeable's confirm chrome do not compose), and a
+ * flyweight never sets the per-row `index` that such a row reports. That index arrived undefined and
+ * was dangerous rather than merely broken: TabLayer.atlasCloseTab guards with
+ * `inIndex < 0 || inIndex >= tabs.length` and BOTH comparisons are false for undefined, so the bad
+ * index sailed past it and `tabs.splice(undefined, 1)` silently closed tab 0 — the wrong tab — before
+ * Math.min(undefined, ...) yielded a NaN that crashed atlasSelectIndex. Real rows own their identity,
+ * and with a handful of tabs there is nothing for a flyweight to save.
  *
  * Chromium host only: the WPE host has real cards and no in-app tabs. */
 enyo.kind({
@@ -82,10 +79,10 @@ enyo.kind({
             var url = (t.url === "about:blank") ? "" : (t.url || "");
             this.$.rows.createComponent({
                 // tabName is the identity; index is only where the row happens to sit today.
-                kind: "SwipeableItem", index: i, tabName: t.name || "", confirmCaption: $L("Close"),
+                kind: "Item", index: i, tabName: t.name || "",
                 layoutKind: "HFlexLayout", align: "center", tapHighlight: true,
                 className: "atlas-phone-tab-row" + (i === this.activeIndex ? " atlas-phone-tab-active" : ""),
-                onclick: "rowClick", onConfirm: "closeRow",
+                onclick: "rowClick",
                 components: [
                     {kind: "Image", className: "atlas-phone-tab-icon",
                      src: t.favicon || "images/bookmark-icon-default.png"},
@@ -93,7 +90,11 @@ enyo.kind({
                         {className: "url-item-title enyo-text-ellipsis",
                          content: t.title || url || $L("New Tab")},
                         {className: "url-item-url enyo-item-ternary enyo-text-ellipsis", content: url}
-                    ]}
+                    ]},
+                    // Carries tabName itself: the handler is given the button, not the row.
+                    {kind: "CustomButton", tabName: t.name || "",
+                     className: "addressbar-button stop-button atlas-phone-tab-close",
+                     onclick: "closeRowClick"}
                 ]
             }, {owner: this});
         }
@@ -113,9 +114,11 @@ enyo.kind({
         if (i === null) { return true; }
         return atlasPhoneTap(this, "select:" + (name || i), this.doSelectTab, [i]);
     },
-    closeRow: function(inSender) {
+    /* The X. Returning true claims the tap so the row's own onclick does not also fire and select the
+     * tab that is being closed. */
+    closeRowClick: function(inSender) {
         var name = inSender && inSender.tabName;
-        var i = this.phoneIndexOf(name, inSender && inSender.index);
+        var i = this.phoneIndexOf(name, null);
         if (i === null) { return true; }
         return atlasPhoneTap(this, "close:" + (name || i), this.doCloseTab, [i]);
     },

@@ -94,6 +94,15 @@
 	overflow: hidden;
 }
 
+/* The X: a 32px sprite, given room so a miss hits the row (select) rather than nothing. */
+.atlas-phone .atlas-phone-tab-close {
+	right: 0;
+	width: 32px;
+	min-width: 32px;
+	margin-left: 10px;
+	margin-right: 4px;
+}
+
 /* The tab you are on, marked the way the strip marks it. */
 .atlas-phone .atlas-phone-tab-active {
 	background-color: rgba(255, 255, 255, .12);
