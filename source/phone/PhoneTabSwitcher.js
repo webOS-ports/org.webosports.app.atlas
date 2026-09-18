@@ -81,7 +81,8 @@ enyo.kind({
             // about:blank is what a fresh tab's url reads as; it is not a label for one.
             var url = (t.url === "about:blank") ? "" : (t.url || "");
             this.$.rows.createComponent({
-                kind: "SwipeableItem", index: i, confirmCaption: $L("Close"),
+                // tabName is the identity; index is only where the row happens to sit today.
+                kind: "SwipeableItem", index: i, tabName: t.name || "", confirmCaption: $L("Close"),
                 layoutKind: "HFlexLayout", align: "center", tapHighlight: true,
                 className: "atlas-phone-tab-row" + (i === this.activeIndex ? " atlas-phone-tab-active" : ""),
                 onclick: "rowClick", onConfirm: "closeRow",
@@ -98,27 +99,42 @@ enyo.kind({
         }
         this.$.rows.render();
     },
-    /* Both handlers take the index off the row that was tapped or swiped — the instance owns it. */
+    /* Both handlers work from the row's tabName, not its position.
+     *
+     * Position is not stable across the very actions these handlers cause: closing a tab rebuilds the
+     * list, so the NEXT tab slides into the index just vacated. Keyed by index, the tap guard then
+     * reads a second close as the same close repeated and drops it — which is exactly the "delete
+     * from the list is not reliable, they do not get deleted and the counter does not update" that
+     * showed up in use. Identity also means the index handed to the tab bookkeeping is resolved fresh
+     * at fire time rather than remembered from when the row was built. */
     rowClick: function(inSender) {
-        var i = this.phoneRowIndex(inSender && inSender.index);
+        var name = inSender && inSender.tabName;
+        var i = this.phoneIndexOf(name, inSender && inSender.index);
         if (i === null) { return true; }
-        return atlasPhoneTap(this, "select:" + i, this.doSelectTab, [i]);
+        return atlasPhoneTap(this, "select:" + (name || i), this.doSelectTab, [i]);
     },
-    closeRow: function(inSender, inIndex) {
-        var i = this.phoneRowIndex(typeof inIndex === "number" ? inIndex
-                                                               : (inSender && inSender.index));
+    closeRow: function(inSender) {
+        var name = inSender && inSender.tabName;
+        var i = this.phoneIndexOf(name, inSender && inSender.index);
         if (i === null) { return true; }
-        return atlasPhoneTap(this, "close:" + i, this.doCloseTab, [i]);
+        return atlasPhoneTap(this, "close:" + (name || i), this.doCloseTab, [i]);
     },
-    /* Refuse to act on an index the tab bookkeeping would mis-handle rather than pass it on: see the
-     * splice(undefined, 1) note at the top of this file. */
-    phoneRowIndex: function(inIndex) {
-        if (typeof inIndex !== "number" || isNaN(inIndex) ||
-            inIndex < 0 || inIndex >= (this.tabs || []).length) {
-            try { console.log("[Atlas] phone tab switcher: ignoring row event, index " + inIndex); } catch (e) {}
-            return null;
+    /* Where does that tab sit NOW? By name, falling back to the row's build-time index for a tab with
+     * no name. Refuses to answer rather than guess: an index the tab bookkeeping mis-handles is worse
+     * than no action, since atlasCloseTab's bounds check passes for undefined and then closes tab 0
+     * (see the note at the top of this file). */
+    phoneIndexOf: function(inName, inIndex) {
+        var tabs = this.tabs || [];
+        if (inName) {
+            for (var i = 0; i < tabs.length; i++) {
+                if (tabs[i].name === inName) { return i; }
+            }
         }
-        return inIndex;
+        if (typeof inIndex === "number" && !isNaN(inIndex) && inIndex >= 0 && inIndex < tabs.length) {
+            return inIndex;
+        }
+        try { console.log("[Atlas] phone tab switcher: no row for " + inName + "/" + inIndex); } catch (e) {}
+        return null;
     },
     newTabClick: function() {
         return atlasPhoneTap(this, "newTab", this.doNewTab);

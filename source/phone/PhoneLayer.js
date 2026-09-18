@@ -145,7 +145,9 @@ if (window.__atlasPhone) {
             }
             var wv = v && v.$ && v.$.view;
             items.push({
-                title: tabs[i].title, url: tabs[i].url,
+                // name is the tab's identity and the switcher keys its rows on it, so that closing
+                // one tab cannot be mistaken for closing the one that takes its place.
+                name: tabs[i].name, title: tabs[i].title, url: tabs[i].url,
                 favicon: (wv && wv.faviconUrl) || ""
             });
         }
