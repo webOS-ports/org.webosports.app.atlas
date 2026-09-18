@@ -82,7 +82,7 @@ enyo.kind({
 		onTranslatePage: ""
 	},
 	components: [
-		{kind: "Control", style: "position:absolute; bottom:0px; left:0px; height:8px; width:1024px; background-color:none; z-index:120;"},
+		{kind: "Control", style: "position:absolute; bottom:0px; left:0px; height:8px; width:100%; background-color:none; z-index:120;"},
 		{name: "launchApplicationService", kind: enyo.PalmService, service: enyo.palmServices.application, method: "open"},
 		{name: "importWallpaperService", kind: enyo.PalmService, service: enyo.palmServices.system, method: "wallpaper/importWallpaper", onSuccess: "importedWallpaper", onFailure: "wallpaperError"},
 		{name: "setWallpaperService", kind: enyo.PalmService, service: enyo.palmServices.system, method: "setPreferences", onFailure: "wallpaperError"},

@@ -19,7 +19,10 @@ enyo.kind({
 		url: "",
 		searchPreferences: [],
 		defaultSearch: "",
-		loading: false
+		loading: false,
+		/* Gap between the address field and its suggestion popup. The default is the tablet's, which
+		 * allows for the 54px ActionBar; the phone's bar is shorter (see PhoneActionBar). */
+		popupOffsetTop: 29
 	},
 	maxSearchResults: 32,
 	suggestURL: "http://suggestqueries.google.com/complete/search?client=firefox&q={$query}",
@@ -121,7 +124,7 @@ enyo.kind({
 			var o = enyo.dom.calcNodeOffset(n);
 			this.$.searchPopup.scrollIntoView(0, 0);
 			this.$.searchPopup.applyStyle("width", n.offsetWidth+10 + "px");
-			this.$.searchPopup.openAtControl(this.$.address, {left: -5, top: n.offsetHeight + 29});
+			this.$.searchPopup.openAtControl(this.$.address, {left: -5, top: n.offsetHeight + this.popupOffsetTop});
 		} else if (empty && this.$.searchPopup.isOpen) {
 			this.closeSearchPopup(true);
 		}

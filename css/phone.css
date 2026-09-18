@@ -12,6 +12,94 @@
  * Sizes follow the 2.2.4 phone browser: a 50px chrome row and 44-48px touch targets. */
 
 /* ---------------------------------------------------------------------------------------------
+ * top bar: the URL pill
+ * --------------------------------------------------------------------------------------------- */
+/* 50px, the 2.2.4 URL row's height, against the tablet's 54 (browser.css .actionbar). */
+.atlas-phone .atlas-phone-actionbar.enyo-toolbar {
+	height: 50px;
+	min-height: 50px;
+	border-width: 0 0 2px;
+	padding: 0;
+}
+
+/* The pill: one tap target spanning the row, styled like the address field it replaces so the two
+ * modes read as the same control. */
+.atlas-phone .atlas-phone-urlrow {
+	height: 36px;
+	margin: 6px 8px;
+	padding: 0 6px;
+	border: 1px solid #000000;
+	border-radius: 6px;
+	background: -webkit-linear-gradient(top, #2a2a2a, #1c1c1c);
+	background: linear-gradient(to bottom, #2a2a2a, #1c1c1c);
+}
+
+.atlas-phone .atlas-phone-title {
+	padding: 0 4px;
+	color: #f2f2f2;
+	font-size: 16px;
+	line-height: 34px;
+	text-align: left;
+}
+
+/* No page yet: the pill carries the field's hint instead of a title, and says so by being dimmer. */
+.atlas-phone .atlas-phone-title-hint {
+	color: #8c8c8c;
+}
+
+/* The lock is a 32px sprite nudged left for the tablet's field (browser.css .secure-lock); inside the
+ * pill it needs neither the nudge nor the full width. */
+.atlas-phone .atlas-phone-lock {
+	left: 0;
+	width: 24px;
+	min-width: 24px;
+	background-size: 20px 20px;
+}
+
+.atlas-phone .atlas-phone-stopreload {
+	right: 0;
+	width: 28px;
+	min-width: 28px;
+}
+
+/* Edit mode: the address field takes the whole row, and its own margins would double up with the
+ * pill's. */
+.atlas-phone .atlas-phone-actionbar .addressbar {
+	margin: 6px 8px;
+}
+
+/* ---------------------------------------------------------------------------------------------
+ * tab switcher
+ * --------------------------------------------------------------------------------------------- */
+.atlas-phone .atlas-phone-list-title {
+	padding-left: 12px;
+	color: #ffffff;
+	font-size: 18px;
+	font-weight: bold;
+}
+
+/* 56px rows: a comfortable target, and enough for a title over its url. */
+.atlas-phone .atlas-phone-tab-row {
+	min-height: 56px;
+	padding: 6px 8px;
+}
+
+.atlas-phone .atlas-phone-tab-icon {
+	width: 24px;
+	height: 24px;
+	margin: 0 10px 0 4px;
+}
+
+.atlas-phone .atlas-phone-tab-text {
+	overflow: hidden;
+}
+
+/* The tab you are on, marked the way the strip marks it. */
+.atlas-phone .atlas-phone-tab-active {
+	background-color: rgba(255, 255, 255, .12);
+}
+
+/* ---------------------------------------------------------------------------------------------
  * bottom command bar
  * --------------------------------------------------------------------------------------------- */
 .atlas-phone .atlas-phone-bottombar.enyo-toolbar {

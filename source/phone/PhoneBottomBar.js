@@ -31,18 +31,18 @@ enyo.kind({
     },
     components: [
         {name: "back", kind: "ToolButton", flex: 1, className: "atlas-phone-bb-button",
-         icon: "images/chrome/menu-icon-back.png", onclick: "doBack"},
+         icon: "images/chrome/menu-icon-back.png", onclick: "backClick"},
         {name: "forward", kind: "ToolButton", flex: 1, className: "atlas-phone-bb-button",
-         icon: "images/chrome/menu-icon-forward.png", onclick: "doForward"},
+         icon: "images/chrome/menu-icon-forward.png", onclick: "forwardClick"},
         // Caption rather than an icon: the caption IS the information (how many tabs are open). On the
         // WPE host it carries the new-card icon instead, set in create().
         {name: "tabs", kind: "ToolButton", flex: 1, className: "atlas-phone-bb-button atlas-phone-bb-tabs",
-         onclick: "doTabs"},
+         onclick: "tabsClick"},
         // menu-icon-menu.png follows the toolbar convention: a 32x64 two-state sprite (translucent
         // normal on top, opaque pressed below). button-menu.png is a 50x100 button BACKGROUND, not a
         // glyph, and renders as a blob at this size.
         {name: "menu", kind: "ToolButton", flex: 1, className: "atlas-phone-bb-button",
-         icon: "images/chrome/menu-icon-menu.png", onclick: "doMenu"}
+         icon: "images/chrome/menu-icon-menu.png", onclick: "menuClick"}
     ],
     create: function() {
         this.inherited(arguments);
@@ -56,6 +56,20 @@ enyo.kind({
         this.tabCountChanged();
     },
     //* @protected
+    /* Every button goes through atlasPhoneTap (PhoneTap.js): LunaCE fires touch AND a synthesised
+     * click for one tap, so binding onclick straight to a do* event doubles every action. */
+    backClick: function() {
+        return atlasPhoneTap(this, this.doBack);
+    },
+    forwardClick: function() {
+        return atlasPhoneTap(this, this.doForward);
+    },
+    tabsClick: function() {
+        return atlasPhoneTap(this, this.doTabs);
+    },
+    menuClick: function() {
+        return atlasPhoneTap(this, this.doMenu);
+    },
     /* Back is never disabled: with no page history it closes the tab/card, which is what Back means
      * on webOS (see Browser.goBack). Forward is disabled when there is nowhere to go, so the bar
      * reads as a real state rather than a dead button. */
