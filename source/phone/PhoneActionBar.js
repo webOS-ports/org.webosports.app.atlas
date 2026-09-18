@@ -37,9 +37,11 @@ enyo.kind({
              onclick: "stopReloadClick"}
         ]},
 
-        /* Edit mode: the tablet's own address field, unchanged. Its suggestion popup is positioned
-         * from the field's own height plus popupOffsetTop, which defaults to the tablet's 29px gap. */
-        {name: "search", kind: "URLSearch", showing: false, popupOffsetTop: 4,
+        /* Edit mode: the tablet's own address field, unchanged, except for where its suggestion popup
+         * sits and how many rows it shows. 36 puts the popup flush under the field rather than over
+         * it (see popupOffsetTop in URLSearch: the popup's -36px margin has to be paid back first),
+         * and six rows is what fits on a phone without burying the page. */
+        {name: "search", kind: "URLSearch", showing: false, popupOffsetTop: 36, maxRows: 6,
          onLoad: "phoneLoad", onStopLoad: "doStopLoad", onRefresh: "doRefresh",
          onAddressInputFocused: "doAddressInputFocused", onAddressInputBlurred: "phoneInputBlurred",
          onAddBookmark: "doAddBookmark", onDeleteBookmark: "doDeleteBookmark"},

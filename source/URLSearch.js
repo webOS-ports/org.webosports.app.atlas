@@ -20,9 +20,17 @@ enyo.kind({
 		searchPreferences: [],
 		defaultSearch: "",
 		loading: false,
-		/* Gap between the address field and its suggestion popup. The default is the tablet's, which
-		 * allows for the 54px ActionBar; the phone's bar is shorter (see PhoneActionBar). */
-		popupOffsetTop: 29
+		/* Where the suggestion popup sits, as an offset added to the address field's own height.
+		 * Note .addressbar-popup carries `margin: -36px 0` (css/browser.css), so the popup's visible
+		 * top lands at fieldTop + fieldHeight + popupOffsetTop - 36: the tablet's 29 therefore tucks
+		 * it 7px UNDER the field, behind its 24px 9-slice frame. Anything much below 36 covers the
+		 * field instead - at 4 the popup started exactly at the field's top and hid what was being
+		 * typed. See PhoneActionBar for the phone's value. */
+		popupOffsetTop: 29,
+		/* Cap on how many suggestion rows are shown. 0 keeps the historical behaviour: bookmarks and
+		 * history are concatenated unbounded (only the search suggestions honour maxSearchResults),
+		 * which on a phone filled the screen with 14 rows. */
+		maxRows: 0
 	},
 	maxSearchResults: 32,
 	suggestURL: "http://suggestqueries.google.com/complete/search?client=firefox&q={$query}",
@@ -117,6 +125,9 @@ enyo.kind({
 		this.fetchSearchResults("bookmarksService", {limit:32});
 	},
 	finishShowSearchResults: function() {
+		if (this.maxRows > 0 && this._searchResults.length > this.maxRows) {
+			this._searchResults.length = this.maxRows;
+		}
 		this.$.resultsList.render();
 		var empty = !this.$.providersList.showing && this._searchResults.length == 0;
 		if (!this.$.searchPopup.isOpen && this.$.address.hasFocus() && !empty) {
