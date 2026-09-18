@@ -1,0 +1,56 @@
+/* Phone layout.
+ *
+ * EVERY rule in this file is scoped to `.atlas-phone`, the class AtlasFormFactor.js puts on <html>.
+ * The file therefore loads on a tablet too (enyo.depends has no conditionals) without a single rule
+ * being able to match there — which is what keeps the TouchPad layout untouched.
+ *
+ * Deliberately no @media queries: phone-ness is not purely a width question (the platform's TabletUi
+ * flag decides first), and a width media query would flip on rotation, where the JS rule correctly
+ * does not. css/browser.css is not edited either; `.atlas-phone .foo` outranks its `.foo`, and this
+ * file loads after it.
+ *
+ * Sizes follow the 2.2.4 phone browser: a 50px chrome row and 44-48px touch targets. */
+
+/* ---------------------------------------------------------------------------------------------
+ * bottom command bar
+ * --------------------------------------------------------------------------------------------- */
+.atlas-phone .atlas-phone-bottombar.enyo-toolbar {
+	height: 48px;
+	min-height: 48px;
+	border-width: 2px 0 0;
+	padding: 0;
+}
+
+/* The four buttons split the width evenly (flex:1 each), so the whole bar is touchable with no gaps
+ * between targets — the 2.2.4 command menu behaved the same way. */
+.atlas-phone .atlas-phone-bb-button {
+	padding: 0;
+	min-height: 44px;
+	text-align: center;
+}
+
+.atlas-phone .atlas-phone-bb-button .enyo-button-icon {
+	display: inline-block;
+	vertical-align: middle;
+	margin: 0 auto;
+}
+
+.atlas-phone .atlas-phone-bb-button.enyo-disabled,
+.atlas-phone .atlas-phone-bb-button[disabled] {
+	opacity: .35;
+}
+
+/* The tab count is the caption of its button, drawn as a boxed numeral so it reads as a tab stack
+ * rather than as stray text. */
+.atlas-phone .atlas-phone-bb-tabs .enyo-button-icon-text {
+	display: inline-block;
+	min-width: 16px;
+	padding: 1px 5px;
+	border: 2px solid #cccccc;
+	border-radius: 4px;
+	color: #eeeeee;
+	font-size: 15px;
+	font-weight: bold;
+	line-height: 18px;
+	text-align: center;
+}
