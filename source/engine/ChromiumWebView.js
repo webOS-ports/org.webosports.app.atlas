@@ -270,9 +270,13 @@ enyo.kind({
             self.title = self.readString(a) || self.title;
             self.pushTitle();
         });
-        on("did-finish-navigation", function () {
+        on("did-finish-navigation", function (navUrl) {
             self.refreshNavState();
-            var u = self.currentUrl();
+            /* The event carries the url that just committed (DoEmit(kDidFinishNavigation, url), main
+             * frame only). Prefer it over the pageContents url property, which reports about:blank for
+             * a suspended tab and sometimes an ad frame's url for a live one. */
+            var committed = self.readString(navUrl) || "";
+            var u = committed || self.currentUrl();
             /* A newly created page view starts at about:blank, and that navigation can complete AFTER
              * our loadURL — clobbering the requested URL in Atlas's address bar and tab label, or even
              * leaving the tab blank if the early load was dropped. Ignore the blank state while a real
@@ -289,7 +293,10 @@ enyo.kind({
             // This view has now committed a real page of its own. Until that happens it is still on
             // the about:blank it was born with, and any icon announced in that window belongs to
             // whatever put it there - see onFavicons.
-            if (!self.isBlank(u)) { self._navigated = true; }
+            if (!self.isBlank(u)) {
+                self._navigated = true;
+                self.committedUrl = u;       // what this view is REALLY showing; see onFavicons
+            }
             if (u && u !== self.url) {
                 // NOT doUrlRedirected: BrowserApp maps that event to openResource, which asks the
                 // system to open the URL in the default handler. On WPE it only fires for a scheme the
@@ -430,7 +437,12 @@ enyo.kind({
              * on the about:blank it was born with — and an icon announced in that window belongs to
              * whatever that page is, not to the site about to load. Recording it against this.url is
              * how a fresh nu.nl tab ended up storing tweakers.net's icon with forUrl "nu.nl". */
-            this.faviconForUrl = this.url || "";
+            /* Bind the icon to the page the ENGINE last committed, not to Atlas's url. They diverge
+             * exactly in the case that kept biting: this.url is set the moment a load is asked for, so
+             * an icon still in flight from the PREVIOUS page is recorded as if it belonged to the new
+             * one - a tab told to go to nu.nl stored tweakers.net's icon against "nu.nl", and the
+             * commit gate could not see it because the view had committed a page by then. */
+            this.faviconForUrl = this.committedUrl || this.url || "";
         }
     },
 
@@ -442,7 +454,8 @@ enyo.kind({
      * commonly lives elsewhere on the same site. */
     getFavicon: function () {
         if (!this.faviconUrl || !this.faviconForUrl) { return ""; }
-        var a = this.hostOfUrl(this.faviconForUrl), b = this.hostOfUrl(this.url);
+        var a = this.hostOfUrl(this.faviconForUrl);
+        var b = this.hostOfUrl(this.committedUrl || this.url);
         if (!a || !b) { return ""; }
         return (a === b) ? this.faviconUrl : "";
     },
