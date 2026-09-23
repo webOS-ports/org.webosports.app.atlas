@@ -22,6 +22,9 @@
          PalmSystem the framework expects. Both are no-ops on legacy webOS. Must precede enyo.js. -->
     <script src="source/engine/AtlasHost.js" type="text/javascript"></script>
     <script src="source/engine/ShellPalmSystem.js" type="text/javascript"></script>
+    <!-- Phone or tablet chrome. Must precede enyo.js: it tags <html> before the first render, and it
+         reads the platform's TabletUi flag through PalmSystem (shimmed just above on the shell). -->
+    <script src="source/engine/AtlasFormFactor.js" type="text/javascript"></script>
     <script src="/usr/palm/frameworks/enyo/0.10/framework/enyo.js" type="text/javascript" launch="bridged"></script>
     <script src="/usr/palm/frameworks/enyo/1.0/framework/enyo.js" type="text/javascript"></script>
 </head>

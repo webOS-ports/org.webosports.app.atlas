@@ -238,7 +238,11 @@ enyo.kind({
         on("dom-ready", function () { self.installInputBridge(); });
         on("did-start-loading", function () {
             self.loading = true;
-            self.faviconUrl = "";        // the old page's icon must not survive into the new one
+            /* Deliberately NOT clearing the favicon here. did-start-loading fires for sub-frame loads
+             * too - ad and tracker frames keep firing it long after the page itself is up - and each
+             * one wiped a perfectly good icon: nu.nl announced its icon three times and the tab still
+             * ended with none. The icon is tied to the page it belongs to instead (see onFavicons and
+             * getFavicon), which handles the stale case without needing to guess when to clear. */
             self.doLoadStarted();
         });
         /* The event is "load-progress-changed" (browser_shell_page_contents.cc, both the 108 and 120
@@ -266,9 +270,13 @@ enyo.kind({
             self.title = self.readString(a) || self.title;
             self.pushTitle();
         });
-        on("did-finish-navigation", function () {
+        on("did-finish-navigation", function (navUrl) {
             self.refreshNavState();
-            var u = self.currentUrl();
+            /* The event carries the url that just committed (DoEmit(kDidFinishNavigation, url), main
+             * frame only). Prefer it over the pageContents url property, which reports about:blank for
+             * a suspended tab and sometimes an ad frame's url for a live one. */
+            var committed = self.readString(navUrl) || "";
+            var u = committed || self.currentUrl();
             /* A newly created page view starts at about:blank, and that navigation can complete AFTER
              * our loadURL — clobbering the requested URL in Atlas's address bar and tab label, or even
              * leaving the tab blank if the early load was dropped. Ignore the blank state while a real
@@ -281,6 +289,13 @@ enyo.kind({
                     setTimeout(function () { if (self.pageContents) { try { self.pageContents.loadURL(want); } catch (e) {} } }, 0);
                 }
                 return;
+            }
+            // This view has now committed a real page of its own. Until that happens it is still on
+            // the about:blank it was born with, and any icon announced in that window belongs to
+            // whatever put it there - see onFavicons.
+            if (!self.isBlank(u)) {
+                self._navigated = true;
+                self.committedUrl = u;       // what this view is REALLY showing; see onFavicons
             }
             if (u && u !== self.url) {
                 // NOT doUrlRedirected: BrowserApp maps that event to openResource, which asks the
@@ -407,7 +422,47 @@ enyo.kind({
             }
             if (area > bestArea) { bestArea = area; best = f.url; }
         }
-        if (best) { this.faviconUrl = best; }
+        /* Ignore icons announced before this view has committed a page of its own. A brand-new tab is
+         * created on about:blank, and an icon arriving in that window is the previous page's, not the
+         * one about to load: that is how a fresh nu.nl tab came to store tweakers.net's icon. The
+         * engine's own url cannot be used to tell them apart - it reads about:blank for a suspended
+         * background tab and sometimes an ad frame's url for a live one - but "has this view ever
+         * committed a page" is unambiguous, and a page always commits before it announces an icon. */
+        if (!this._navigated) { return; }
+        if (best) {
+            this.faviconUrl = best;
+            /* Remember which page announced it, taken from the ENGINE rather than from Atlas's own
+             * this.url. The two differ exactly when it matters: this.url is set optimistically to what
+             * was asked for ("nu.nl") the moment a load starts, while a brand-new tab is still sitting
+             * on the about:blank it was born with — and an icon announced in that window belongs to
+             * whatever that page is, not to the site about to load. Recording it against this.url is
+             * how a fresh nu.nl tab ended up storing tweakers.net's icon with forUrl "nu.nl". */
+            /* Bind the icon to the page the ENGINE last committed, not to Atlas's url. They diverge
+             * exactly in the case that kept biting: this.url is set the moment a load is asked for, so
+             * an icon still in flight from the PREVIOUS page is recorded as if it belonged to the new
+             * one - a tab told to go to nu.nl stored tweakers.net's icon against "nu.nl", and the
+             * commit gate could not see it because the view had committed a page by then. */
+            this.faviconForUrl = this.committedUrl || this.url || "";
+        }
+    },
+
+    /* The icon, but only if it belongs to the page this view is showing.
+     *
+     * Matched by host against Atlas's url, which unlike the engine's survives a background tab being
+     * suspended to about:blank and so keeps the icon in the tab list. Host rather than exact url:
+     * Atlas's url may be what the user typed against a committed https://www. form, and a site's icon
+     * commonly lives elsewhere on the same site. */
+    getFavicon: function () {
+        if (!this.faviconUrl || !this.faviconForUrl) { return ""; }
+        var a = this.hostOfUrl(this.faviconForUrl);
+        var b = this.hostOfUrl(this.committedUrl || this.url);
+        if (!a || !b) { return ""; }
+        return (a === b) ? this.faviconUrl : "";
+    },
+    hostOfUrl: function (inUrl) {
+        var u = String(inUrl || "").replace(/^[a-z][a-z0-9+.-]*:\/\//i, "");
+        u = u.split("/")[0].split("?")[0].split("#")[0];
+        return u.replace(/^www\./i, "").toLowerCase();
     },
 
     /* Route a camera/mic request through Atlas's confirm dialog. pendingDialog is a single slot, so a

@@ -1,0 +1,153 @@
+/* Phone layout.
+ *
+ * EVERY rule in this file is scoped to `.atlas-phone`, the class AtlasFormFactor.js puts on <html>.
+ * The file therefore loads on a tablet too (enyo.depends has no conditionals) without a single rule
+ * being able to match there — which is what keeps the TouchPad layout untouched.
+ *
+ * Deliberately no @media queries: phone-ness is not purely a width question (the platform's TabletUi
+ * flag decides first), and a width media query would flip on rotation, where the JS rule correctly
+ * does not. css/browser.css is not edited either; `.atlas-phone .foo` outranks its `.foo`, and this
+ * file loads after it.
+ *
+ * Sizes follow the 2.2.4 phone browser: a 50px chrome row and 44-48px touch targets. */
+
+/* ---------------------------------------------------------------------------------------------
+ * top bar: the URL pill
+ * --------------------------------------------------------------------------------------------- */
+/* 50px, the 2.2.4 URL row's height, against the tablet's 54 (browser.css .actionbar). */
+.atlas-phone .atlas-phone-actionbar.enyo-toolbar {
+	height: 50px;
+	min-height: 50px;
+	border-width: 0 0 2px;
+	padding: 0;
+}
+
+/* The pill: one tap target spanning the row, styled like the address field it replaces so the two
+ * modes read as the same control. */
+.atlas-phone .atlas-phone-urlrow {
+	height: 36px;
+	margin: 6px 8px;
+	padding: 0 6px;
+	border: 1px solid #000000;
+	border-radius: 6px;
+	background: -webkit-linear-gradient(top, #2a2a2a, #1c1c1c);
+	background: linear-gradient(to bottom, #2a2a2a, #1c1c1c);
+}
+
+.atlas-phone .atlas-phone-title {
+	padding: 0 4px;
+	color: #f2f2f2;
+	font-size: 16px;
+	line-height: 34px;
+	text-align: left;
+}
+
+/* No page yet: the pill carries the field's hint instead of a title, and says so by being dimmer. */
+.atlas-phone .atlas-phone-title-hint {
+	color: #8c8c8c;
+}
+
+/* The lock is a 32px sprite nudged left for the tablet's field (browser.css .secure-lock); inside the
+ * pill it needs neither the nudge nor the full width. */
+.atlas-phone .atlas-phone-lock {
+	left: 0;
+	width: 24px;
+	min-width: 24px;
+	background-size: 20px 20px;
+}
+
+.atlas-phone .atlas-phone-stopreload {
+	right: 0;
+	width: 28px;
+	min-width: 28px;
+}
+
+/* Edit mode: the address field takes the whole row, and its own margins would double up with the
+ * pill's. */
+.atlas-phone .atlas-phone-actionbar .addressbar {
+	margin: 6px 8px;
+}
+
+/* ---------------------------------------------------------------------------------------------
+ * tab switcher
+ * --------------------------------------------------------------------------------------------- */
+.atlas-phone .atlas-phone-list-title {
+	padding-left: 12px;
+	color: #ffffff;
+	font-size: 18px;
+	font-weight: bold;
+}
+
+/* 56px rows: a comfortable target, and enough for a title over its url. */
+.atlas-phone .atlas-phone-tab-row {
+	min-height: 56px;
+	padding: 6px 8px;
+}
+
+.atlas-phone .atlas-phone-tab-icon {
+	width: 24px;
+	height: 24px;
+	margin: 0 10px 0 4px;
+}
+
+.atlas-phone .atlas-phone-tab-text {
+	overflow: hidden;
+}
+
+/* The X: a 32px sprite, given room so a miss hits the row (select) rather than nothing. */
+.atlas-phone .atlas-phone-tab-close {
+	right: 0;
+	width: 32px;
+	min-width: 32px;
+	margin-left: 10px;
+	margin-right: 4px;
+}
+
+/* The tab you are on, marked the way the strip marks it. */
+.atlas-phone .atlas-phone-tab-active {
+	background-color: rgba(255, 255, 255, .12);
+}
+
+/* ---------------------------------------------------------------------------------------------
+ * bottom command bar
+ * --------------------------------------------------------------------------------------------- */
+.atlas-phone .atlas-phone-bottombar.enyo-toolbar {
+	height: 48px;
+	min-height: 48px;
+	border-width: 2px 0 0;
+	padding: 0;
+}
+
+/* The four buttons split the width evenly (flex:1 each), so the whole bar is touchable with no gaps
+ * between targets — the 2.2.4 command menu behaved the same way. */
+.atlas-phone .atlas-phone-bb-button {
+	padding: 0;
+	min-height: 44px;
+	text-align: center;
+}
+
+.atlas-phone .atlas-phone-bb-button .enyo-button-icon {
+	display: inline-block;
+	vertical-align: middle;
+	margin: 0 auto;
+}
+
+.atlas-phone .atlas-phone-bb-button.enyo-disabled,
+.atlas-phone .atlas-phone-bb-button[disabled] {
+	opacity: .35;
+}
+
+/* The tab count is the caption of its button, drawn as a boxed numeral so it reads as a tab stack
+ * rather than as stray text. */
+.atlas-phone .atlas-phone-bb-tabs .enyo-button-icon-text {
+	display: inline-block;
+	min-width: 16px;
+	padding: 1px 5px;
+	border: 2px solid #cccccc;
+	border-radius: 4px;
+	color: #eeeeee;
+	font-size: 15px;
+	font-weight: bold;
+	line-height: 18px;
+	text-align: center;
+}
