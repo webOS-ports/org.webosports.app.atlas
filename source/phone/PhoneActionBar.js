@@ -68,6 +68,7 @@ enyo.kind({
     ],
     //* @protected
     _editing: false,
+    _focusPending: false,
 
     create: function() {
         this.inherited(arguments);       // runs urlChanged/titleChanged/loading etc. for us
@@ -85,8 +86,28 @@ enyo.kind({
         this.$.search.setUrl(this.url);
         // The row's height does not change, so no bounds resync is needed — only its contents swap.
         this.$.search.render();
-        this.$.search.forceFocus();
+        this.phoneKeepAskingForFocus();
         return true;
+    },
+    /* Asking for the focus once is not enough.
+     *
+     * enyo's forceFocus is an asyncMethod around node.focus(), and node.focus() on an element that is
+     * still display:none does nothing at all, silently. That is exactly where this lands when the bar
+     * is focused rather than tapped: the pane builds and renders the start page before it shows it, so
+     * the field is asked for the focus while it is not on screen yet, and the app came up in edit mode
+     * with the keyboard still going nowhere. So ask, check whether it took, and ask again on the next
+     * beat until it does — a couple of seconds' worth of tries, then give up rather than spin. A tap
+     * gets its focus on the first go and never sees the rest. */
+    phoneKeepAskingForFocus: function(inTriesLeft) {
+        var left = (inTriesLeft === undefined) ? 12 : inTriesLeft;
+
+        if (!this._editing || this.$.search.$.address.hasFocus()) { return; }
+
+        this.$.search.forceFocus();
+
+        if (left > 0) {
+            enyo.job(this.id + "phoneFocus", enyo.bind(this, "phoneKeepAskingForFocus", left - 1), 150);
+        }
     },
     exitEditMode: function() {
         if (!this._editing) { return; }
@@ -95,6 +116,38 @@ enyo.kind({
         this.$.search.setShowing(false);
         this.$.titleRow.setShowing(true);
         this.phoneUpdatePill();
+    },
+    /* Focusing the bar IS entering edit mode here.
+     *
+     * StartPage focuses the action bar every time it is shown, so that a keyboard can type an address
+     * without tapping anything first: ActionBar.forceFocus goes URLSearch -> AddressInput -> the input's
+     * node. On the phone that input is not on screen until edit mode is entered - $.search is
+     * showing:false, and focusing a node with display:none does nothing at all - which is why typing on
+     * the start page went nowhere and the pill had to be tapped first.
+     *
+     * Deferred when there is no node yet: enyo calls showingChanged from create (DomNode.create does),
+     * so StartPage asks for this before anything is rendered, and edit mode has a field to render.
+     * rendered() picks the request up once there is a DOM to focus. */
+    forceFocus: function() {
+        if (!this.hasNode()) {
+            this._focusPending = true;
+            return;
+        }
+        this.enterEditMode();
+    },
+    rendered: function() {
+        this.inherited(arguments);
+        if (this._focusPending) {
+            this._focusPending = false;
+            this.enterEditMode();
+        }
+    },
+    /* The other half of StartPage's pair: giving the focus up on the phone means going back to showing
+     * the title, not just closing a suggestion popup over a field that is no longer there. */
+    forceBlur: function() {
+        this.inherited(arguments);
+        this._focusPending = false;
+        this.exitEditMode();
     },
     /* Leaving the field without committing (the user tapped the page, or hid the keyboard) goes back
      * to showing the title, which is where 2.2.4 landed too. Deferred a beat: the blur that arrives
