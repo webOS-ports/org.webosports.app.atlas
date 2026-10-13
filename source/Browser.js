@@ -29,6 +29,7 @@ function atlasWebViewConfig() {
 		onLoadStopped: "loadStopped",
 		onLoadComplete: "loadCompleted",
 		onFileLoad: "doFileLoad",
+		onDownloadRequested: "engineDownloadRequested",
 		onError: "browserError",
 		onSingleTap: "browserTap",
 		onScrolledTo: "browserScrolled",
@@ -953,6 +954,14 @@ enyo.kind({
 	},
 	wallpaperError: function(inSender, inResponse) {
 		this.openDialog($L("Error"), $L("Failed to set wallpaper"));
+	},
+	/* The engine cannot download (no download stack in neva), so it refuses the transfer and tells us
+	 * what was wanted; the app downloads it through the platform's download manager. doDownloadLink is
+	 * the same event the page's "Download link" context menu fires, so BrowserApp needs no new path. */
+	engineDownloadRequested: function(inSender, inUrl, inMime) {
+		if (!inUrl) { return true; }
+		this.doDownloadLink(inUrl, inMime);
+		return true;
 	},
 	goBack: function() {
 		// Leaving fullscreen is what Back means while a video is fullscreen — navigating away from the

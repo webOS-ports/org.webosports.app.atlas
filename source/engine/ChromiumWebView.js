@@ -49,7 +49,8 @@ enyo.kind({
         onEditorFocusChanged: "",
         onScrolledTo: "",
         onError: "",
-        onDisconnected: ""
+        onDisconnected: "",
+        onDownloadRequested: ""
     },
 
     // ---------------------------------------------------------------------------------------------
@@ -332,6 +333,15 @@ enyo.kind({
                 return;
             }
             self.openInNewTab(target);
+        });
+        /* A page asked for a download. Chromium's own download stack is not built into neva, so the
+         * engine refuses the transfer and hands us the request instead (see
+         * AppRuntimeDownloadManagerDelegate); Atlas fetches it through the platform's download
+         * manager, which is what owns the download list, the history and the notifications. */
+        on("download-requested", function (url, mimeType) {
+            var u = self.readString(url) || "";
+            if (!u) { return; }
+            self.doDownloadRequested(u, self.readString(mimeType) || "");
         });
         /* target=_blank and window.open handled by the browser side rather than the renderer arrive
          * here instead of through newwindow. */
