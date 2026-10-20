@@ -12,6 +12,26 @@
 //   See the License for the specific language governing permissions and
 //   limitations under the License.
 
+/* Which download manager to talk to.
+ *
+ * The service is the same Palm download manager either way - same methods, same parameters (target,
+ * mime, targetDir, targetFilename) - but the bus name differs by platform, and a call to the wrong one
+ * simply never gets a reply:
+ *
+ *   legacy webOS (TouchPad, Pre 3)   com.palm.downloadmanager        (what the stock browser calls)
+ *   LuneOS                           com.webos.service.downloadmanager
+ *
+ * Verified on LuneOS with ls-monitor: only com.webos.service.downloadmanager is registered, and
+ * nothing in /usr/share/luna-service2 maps the old name onto it, so every download Atlas started went
+ * nowhere silently.
+ *
+ * Keyed on the engine because that is what distinguishes the two platforms in practice: browser_shell
+ * exists only on LuneOS, and on LuneOS Atlas only runs there (WAM cannot embed web content - no NPAPI,
+ * and the webview tag is inert under --disable-extensions). An Atlas somehow running under WAM on
+ * LuneOS would need the modern name too; if that ever ships, probe instead of guessing. */
+var ATLAS_DOWNLOAD_SERVICE = window.__atlasChromium ?
+	"luna://com.webos.service.downloadmanager/" : "palm://com.palm.downloadmanager/";
+
 enyo.kind({
 	name: "enyo.BrowserApp",
 	kind: enyo.VFlexBox,
@@ -25,10 +45,10 @@ enyo.kind({
 	},
 	components: [
 		{kind: "ApplicationEvents", onWindowActivated: "windowActivatedHandler", onWindowDeactivated: "windowDeactivatedHandler", onApplicationRelaunch: "applicationRelaunchHandler"},
-		{name: "downloadService", kind: enyo.PalmService, service: "palm://com.palm.downloadmanager/", method: "download", onSuccess: "gotDownloadStatus", onFailure: "gotDownloadFailure", subscribe: true, resubscribe: true},
-		{name: "cancelDownloadService", kind: enyo.PalmService, service: "palm://com.palm.downloadmanager/", method: "cancelDownload"},
-		{name: "downloadHistoryService", kind: enyo.PalmService, service: "palm://com.palm.downloadmanager/", method: "getAllHistory", onSuccess: "gotDownloadHistory"},
-		{name: "clearDownloadsService", kind: enyo.PalmService, service: "palm://com.palm.downloadmanager/", method: "clearHistory"},
+		{name: "downloadService", kind: enyo.PalmService, service: ATLAS_DOWNLOAD_SERVICE, method: "download", onSuccess: "gotDownloadStatus", onFailure: "gotDownloadFailure", subscribe: true, resubscribe: true},
+		{name: "cancelDownloadService", kind: enyo.PalmService, service: ATLAS_DOWNLOAD_SERVICE, method: "cancelDownload"},
+		{name: "downloadHistoryService", kind: enyo.PalmService, service: ATLAS_DOWNLOAD_SERVICE, method: "getAllHistory", onSuccess: "gotDownloadHistory"},
+		{name: "clearDownloadsService", kind: enyo.PalmService, service: ATLAS_DOWNLOAD_SERVICE, method: "clearHistory"},
 		{name: "bookmarksService", kind: "DbService", dbKind: "com.palm.browserbookmarks:1", reCallWatches: true},
 		{name: "historyService", kind: "DbService", dbKind: "com.palm.browserhistory:1", reCallWatches: true},
 		{name: "systemPrefsService", kind: "SystemService"},
@@ -877,8 +897,8 @@ enyo.kind({
 	shareClick: function() {
 		this.$.browser.shareLink(this.url, this.title);
 	},
-    downloadClick: function(inSender, inLink) {
-        this.downloadResource(inLink);
+    downloadClick: function(inSender, inLink, inMime) {
+        this.downloadResource(inLink, inMime);
     },
 	bookmarksClick: function() {
 		this.$.toaster.open();
