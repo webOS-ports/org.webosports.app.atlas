@@ -6,6 +6,10 @@
 //
 // Spec: github.com/webOSArchive/webos-mcp  ->  knowledge/updater.md
 //   GET getLatestVersionInfo.php?app={name}/{ver}&clientid={uuid}&device={model/plat/carrier/locale}
+//
+// clientid is a random UUID made once per install and kept in localStorage - never the device's
+// NDUID, which on Halium is SHA-1 of the hardware serial and would let the service (and anyone on
+// the path) recognise the phone across reinstalls. The request goes over HTTPS.
 //   -> {"version","versionNote","downloadURI"}  ("" or "ERROR:..." => none)
 //   numeric #.#.# version compare; install by launching org.webosinternals.preware {type:install,file:uri}
 //
@@ -16,18 +20,14 @@ enyo.kind({
 	published: {
 		// MUST match the App Museum II registration exactly.
 		appName: "Atlas Web",
-		serviceURL: "http://appcatalog.webosarchive.org/WebService/getLatestVersionInfo.php"
+		serviceURL: "https://appcatalog.webosarchive.org/WebService/getLatestVersionInfo.php"
 	},
 	events: {
 		// (inSender, inInfo{version, versionNote, downloadURI}) — fired only when a STRICTLY newer build exists.
 		onUpdateFound: ""
 	},
-	components: [
-		{name: "prefs", kind: "PalmService", service: "palm://com.palm.preferences/systemProperties",
-			method: "getSomeProperties", onSuccess: "gotNduid", onFailure: "gotNduid"}
-	],
 	version: "0",
-	nduid: "",
+	clientId: "",
 	create: function() {
 		this.inherited(arguments);
 		// current version from appinfo.json — single source of truth (kept in sync with the package)
@@ -37,14 +37,11 @@ enyo.kind({
 	//* @public — silent check; surfaces via onUpdateFound only when a newer version is available.
 	checkForUpdate: function() {
 		if (!(window.PalmSystem || (window.enyo && enyo.platform && enyo.platform.webos))) { return; } // device only
-		// Device NDUID for analytics (graceful either way — see gotNduid).
-		this.$.prefs.call({keys: ["com.palm.properties.nduid"]});
-	},
-	gotNduid: function(inSender, inResponse) {
-		this.nduid = (inResponse && inResponse["com.palm.properties.nduid"]) || this.fallbackUuid();
+		this.clientId = this.installUuid();
 		this.doServiceCheck();
 	},
-	fallbackUuid: function() {
+	//* A random UUID kept per install ("updater-uuid"); a fresh one each launch if storage is unavailable.
+	installUuid: function() {
 		var id = null;
 		try { id = window.localStorage && localStorage.getItem("updater-uuid"); } catch (e) {}
 		if (!id) {
@@ -66,10 +63,8 @@ enyo.kind({
 	},
 	doServiceCheck: function() {
 		var url = this.serviceURL;
-		// HTTPS context -> upgrade the service URL (mixed-content otherwise).
-		if (window.location && window.location.protocol === "https:") { url = url.replace(/^http:/, "https:"); }
 		url += "?app=" + encodeURIComponent(this.appName + "/" + this.version) +
-			"&clientid=" + encodeURIComponent(this.nduid) +
+			"&clientid=" + encodeURIComponent(this.clientId) +
 			"&device=" + encodeURIComponent(this.deviceString());
 		var self = this;
 		this.getText(url, function(text) { self.gotVersionInfo(text); });
