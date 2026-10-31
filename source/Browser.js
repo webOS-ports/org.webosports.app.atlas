@@ -56,6 +56,7 @@ enyo.kind({
 		searchPreferences: {},
 		defaultSearch: "",
 		offerTranslate: false,
+		searchSuggestions: false,
 		// MODE 2 (viewport/low-memory): when true, this card's loads are tagged with the internal
 		// "atlas-simple:" marker so BS renders viewport-only (mult=1) instead of the tall pan buffer —
 		// for non-scrolling cards (OAuth popups, app SPAs). Set from the launch param mode=simple.
@@ -436,6 +437,9 @@ enyo.kind({
 	// Show/hide the address-bar Google Translate icon based on the "Offer to translate pages" preference.
 	offerTranslateChanged: function() {
 		if (this.$.actionbar) { this.$.actionbar.setShowTranslate(this.offerTranslate); }
+	},
+	searchSuggestionsChanged: function() {
+		this.$.actionbar.setSearchSuggestions(this.searchSuggestions);
 	},
 	// Address-bar translate icon tapped -> ask the app to open the current page via Google Translate.
 	actionbarTranslate: function() {

@@ -20,6 +20,9 @@ enyo.kind({
 		searchPreferences: [],
 		defaultSearch: "",
 		loading: false,
+		/* Off unless asked for: every address-bar keystroke past the first would go to the
+		 * suggestion service. Bookmarks and history are local and always offered. */
+		searchSuggestions: false,
 		/* Where the suggestion popup sits, as an offset added to the address field's own height.
 		 * Note .addressbar-popup carries `margin: -36px 0` (css/browser.css), so the popup's visible
 		 * top lands at fieldTop + fieldHeight + popupOffsetTop - 36: the tablet's 29 therefore tucks
@@ -174,7 +177,7 @@ enyo.kind({
 	},
 	fetchSearchSuggestions: function() {
 		var v = this.$.address.getUserInput(true);
-		if (this.suggestURL && v && v.length > 1) {
+		if (this.searchSuggestions && this.suggestURL && v && v.length > 1) {
 			var suggestStr = enyo.macroize(this.suggestURL, {query: escape(v)});
 			this.$.suggestSearch.setUrl(suggestStr);
 			this.$.suggestSearch.call();

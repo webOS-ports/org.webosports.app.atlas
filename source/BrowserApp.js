@@ -449,6 +449,7 @@ enyo.kind({
 			acceptCookies: "setAcceptCookies",
 			offerTranslate: "setOfferTranslate",
 			autoplayWithSound: "setAutoplayWithSound",
+			searchSuggestions: "setSearchSuggestions",
 		}
 		this.$.pane.viewByName("browser");
 		var o = inPreference == "clearHistory" || inPreference == "clearBookmarks" ? this : this.$.browser;
@@ -458,6 +459,10 @@ enyo.kind({
 		if (o[preferenceMap[inPreference] || inPreference]) {
 			this.log(preferenceMap[inPreference || inPreference], inValue);
 			o[preferenceMap[inPreference] || inPreference](inValue);
+		}
+		// The start page has an address bar of its own.
+		if (inPreference == "searchSuggestions") {
+			this.$.pane.viewByName("startPage").setSearchSuggestions(inValue);
 		}
 	},
 	systemPreferencesChanged: function() {
@@ -504,7 +509,8 @@ enyo.kind({
 			{_kind: kind, key: "enableJavascript", value: true},
 			{_kind: kind, key: "autoplayWithSound", value: false},
 			{_kind: kind, key: "rememberPasswords", value: true},
-			{_kind: kind, key: "offerTranslate", value: false}
+			{_kind: kind, key: "offerTranslate", value: false},
+			{_kind: kind, key: "searchSuggestions", value: false}
 		];
 		if (inResponse.results.length == 0) {
 			this.$.browserPrefsService.call({objects: defaultBrowserPreferences}, {method: "put", onSuccess: "fetchPreferences"});
