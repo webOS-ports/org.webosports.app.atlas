@@ -33,7 +33,7 @@ enyo.kind({
 		maxRows: 0
 	},
 	maxSearchResults: 32,
-	suggestURL: "http://suggestqueries.google.com/complete/search?client=firefox&q={$query}",
+	suggestURL: "https://suggestqueries.google.com/complete/search?client=firefox&q={$query}",
 	className: "addressbar",
 	events: {
 		onLoad: "",
