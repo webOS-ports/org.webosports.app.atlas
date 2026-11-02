@@ -19,7 +19,8 @@ enyo.kind({
 	published: {
 		url: "",
 		searchPreferences: {},
-		defaultSearch: ""
+		defaultSearch: "",
+		searchSuggestions: false
 	},
 	events: {
 		onUrlChange: "",
@@ -79,6 +80,9 @@ enyo.kind({
 	},
 	defaultSearchChanged: function() {
 		this.$.actionbar.setDefaultSearch(this.defaultSearch);
+	},
+	searchSuggestionsChanged: function() {
+		this.$.actionbar.setSearchSuggestions(this.searchSuggestions);
 	},
 	//* @protected
 	// Bookmark grid

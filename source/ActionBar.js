@@ -30,7 +30,8 @@ enyo.kind({
 		defaultSearch: "",
 		progress: 0,
 		loading: false,
-		showTranslate: false
+		showTranslate: false,
+		searchSuggestions: false
 	},
 		backHistory: [],
 	forwardHistory: [],
@@ -128,6 +129,9 @@ enyo.kind({
 	},
 	defaultSearchChanged: function() {
 		this.$.search.setDefaultSearch(this.defaultSearch);
+	},
+	searchSuggestionsChanged: function() {
+		this.$.search.setSearchSuggestions(this.searchSuggestions);
 	},
 	showSharePopup: function(inSender, inEvent) {
 		this.$.sharePopup.openAt({top: -1000});

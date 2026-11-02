@@ -49,6 +49,9 @@ enyo.kind({
 					{kind: "LabeledContainer", caption: $L("Offer to translate pages"), components: [
 						{kind: "ToggleButton", name: "offerTranslate", onChange: "togglePreferenceClick", preference: "offerTranslate", type: "Browser"}
 					]},
+					{kind: "LabeledContainer", caption: $L("Send typed text to Google for search suggestions"), components: [
+						{kind: "ToggleButton", name: "searchSuggestions", onChange: "togglePreferenceClick", preference: "searchSuggestions", type: "Browser"}
+					]},
 					{kind: "LabeledContainer", caption: $L("Autoplay media with sound"), components: [
 						{kind: "ToggleButton", name: "autoplayWithSound", onChange: "togglePreferenceClick", preference: "autoplayWithSound", type: "Browser"}
 					]},
