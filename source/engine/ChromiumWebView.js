@@ -110,6 +110,9 @@ enyo.kind({
         } catch (e) {}
         this.pageView = null;
         this.pageContents = null;
+        this._videoPlaying = false;
+        if (this._fullscreen) { this.setPageFullscreen(false); }
+        else if (window.AtlasPlayback) { window.AtlasPlayback.update(); }
     },
 
     /* A card tagged private gets its own throwaway partition so its cookies and storage never touch
@@ -213,6 +216,7 @@ enyo.kind({
         var pc = this.pageContents;
         try {
             if (this.pageView) { this.pageView.setVisible(!!active && !this._overlayHidden); }
+            if (window.AtlasPlayback) { setTimeout(window.AtlasPlayback.update, 0); }
             if (!pc) { return; }
             if (active) {
                 pc.resumeDOM(); pc.resumeMedia(); pc.activate();
@@ -374,6 +378,10 @@ enyo.kind({
          * lasts, and put the chrome back afterwards. */
         on("enter-html-fullscreen", function () { self.setPageFullscreen(true); });
         on("leave-html-fullscreen", function () { self.setPageFullscreen(false); });
+        on("video-playing-changed", function (playing) {
+            self._videoPlaying = !!playing;
+            if (window.AtlasPlayback) { window.AtlasPlayback.update(); }
+        });
 
         /* Favicons. The WPE host cannot fetch these itself — LunaSysMgr's ancient WebKit has no modern
          * TLS — so the backend downloads them into the app bundle and Atlas reads a relative path. Here
@@ -408,8 +416,11 @@ enyo.kind({
             if (on) { this._stripWasShowing = app.$.tabStrip.showing; }
             try { app.$.tabStrip.setShowing(on ? false : !!this._stripWasShowing); } catch (e) {}
         }
+        var shellWin = window.shell && window.shell.shellWindow;
+        try { if (shellWin && shellWin.setCardFullscreen) { shellWin.setCardFullscreen(!!on); } } catch (e) {}
         this._bounds = "";                 // the rect is computed differently now — force a push
         this.scheduleBoundsSync();
+        if (window.AtlasPlayback) { window.AtlasPlayback.update(); }
     },
     /* Called by Atlas's Back gesture so the page leaves fullscreen instead of navigating away. Returns
      * true when it consumed the gesture. */

@@ -1,0 +1,79 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Screen lock</title>
+<style>
+html, body { margin: 0; height: 100%; background: transparent; overflow: hidden;
+             font-family: Prelude, sans-serif; touch-action: none; user-select: none; }
+#button { position: fixed; top: 8px; right: 8px; width: 48px; height: 48px; border: 0; padding: 0;
+          border-radius: 50%; background: rgba(0, 0, 0, 0.55); opacity: 0.45; transition: opacity 0.3s; }
+#button.shown { opacity: 1; }
+/* The view fills the window while locked: keep the button where it was, BUTTON_INSET + 8 in */
+body.locked #button { right: 36px; top: 36px; }
+#button svg { width: 26px; height: 26px; fill: #fff; vertical-align: middle; }
+#notice { position: fixed; top: 44px; right: 96px; padding: 8px 14px; border-radius: 16px; color: #fff;
+          font-size: 16px; background: rgba(0, 0, 0, 0.7); display: none; }
+#notice.shown { display: block; }
+</style>
+</head>
+<body>
+<div id="notice"></div>
+<button id="button" aria-label="Lock the screen">
+<svg id="open" viewBox="0 0 24 24"><path d="M12 2a5 5 0 0 0-5 5h2a3 3 0 0 1 6 0v3H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8a2 2 0 0 0-2-2h-1V7a5 5 0 0 0-5-5z"/></svg>
+<svg id="shut" viewBox="0 0 24 24" style="display:none"><path d="M12 2a5 5 0 0 0-5 5v3H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8a2 2 0 0 0-2-2h-1V7a5 5 0 0 0-5-5zm-3 8V7a3 3 0 0 1 6 0v3H9z"/></svg>
+</button>
+<script>
+var ipc = new ShellIpc("atlas_screen_lock");
+var button = document.getElementById("button");
+var notice = document.getElementById("notice");
+var locked = false, asked = false, timer = null;
+
+function show(text) {
+    notice.textContent = text;
+    notice.className = "shown";
+    button.className = "shown";
+    clearTimeout(timer);
+    timer = setTimeout(function () {
+        notice.className = "";
+        button.className = "";
+        asked = false;
+    }, 4000);
+}
+
+/* Called by ChromiumPlayback.js */
+function setLocked(on) {
+    locked = on;
+    asked = false;
+    document.body.className = on ? "locked" : "";
+    document.getElementById("open").style.display = on ? "none" : "";
+    document.getElementById("shut").style.display = on ? "" : "none";
+    button.setAttribute("aria-label", on ? "Unlock controls" : "Lock the screen");
+    if (on) {
+        show("Screen locked");
+    } else {
+        clearTimeout(timer);
+        notice.className = "";
+        button.className = "";
+    }
+}
+
+button.addEventListener("click", function (e) {
+    e.stopPropagation();
+    if (!locked) {
+        ipc.post("lock", {});
+    } else if (asked) {
+        ipc.post("unlock", {});
+    } else {
+        asked = true;
+        show("Unlock controls?");
+    }
+});
+
+document.addEventListener("click", function () {
+    if (locked) { asked = false; show("Screen locked"); }
+});
+</script>
+</body>
+</html>
