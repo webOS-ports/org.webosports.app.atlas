@@ -393,11 +393,13 @@ enyo.kind({
 			this.$.browser.viewCall("activate");
 		}
 		this.refreshDownloads();
+		if (window.AtlasPlayback) { window.AtlasPlayback.update(); }
 	},
 	windowDeactivatedHandler: function() {
 		if (this.isBrowserShowing()) {
 			this.$.browser.viewCall("deactivate");
 		}
+		if (window.AtlasPlayback) { window.AtlasPlayback.update(); }
 	},
 	refreshPanes: function() {
 		this.inherited(arguments);
