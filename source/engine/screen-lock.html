@@ -16,6 +16,11 @@ body.locked #button { right: 36px; top: 36px; }
 #notice { position: fixed; top: 44px; right: 96px; padding: 8px 14px; border-radius: 16px; color: #fff;
           font-size: 16px; background: rgba(0, 0, 0, 0.7); display: none; }
 #notice.shown { display: block; }
+/* In landscape the lock sits halfway down the right edge (placeLock in ChromiumPlayback.js) */
+@media (orientation: landscape) {
+    body.locked #button { top: calc(50% - 24px); }
+    #notice { top: calc(50% - 17px); }
+}
 </style>
 </head>
 <body>
