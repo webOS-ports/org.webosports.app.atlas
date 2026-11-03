@@ -4,8 +4,9 @@
  *    Without it the display timeout turns the screen off under a film, sound still going.
  *  - A fullscreen video covers the whole screen, status bar and gesture area too, through the card
  *    shell's "LuneOS_fullscreen" window property (see ChromiumWebView.setPageFullscreen).
- *  - The screen lock, as in Netflix's app: the lock at the top right turns every tap off, for a phone
- *    held in a hand or passed around. A tap then only shows "Screen locked"; tapping that asks
+ *  - The screen lock, as in Netflix's app: the lock at the top right (in landscape, halfway down the
+ *    right edge, clear of the corner where players put their own buttons) turns every tap off, for a
+ *    phone held in a hand or passed around. A tap then only shows "Screen locked"; tapping that asks
  *    "Unlock controls?", and a second tap unlocks.
  *
  * A page view is a native view above the UI page, so nothing in Atlas's DOM can be drawn over a page
@@ -20,8 +21,8 @@ window.AtlasPlayback = (function () {
     var FOREGROUND_URI = "luna://com.webos.service.applicationManager/getForegroundAppInfo";
     var CHANNEL = "atlas_screen_lock";
     var BUTTON_SIZE = 64;
-    // The button sits 8 inside its view, so 36 from the top and from the right edge alike;
-    // body.locked #button in screen-lock.html stays in step.
+    // The button sits 8 inside its view, so 36 from the top and from the right edge alike, or in
+    // landscape centred on the right edge; body.locked #button in screen-lock.html stays in step.
     var BUTTON_INSET = 28;
     // A video stopping for a moment (the next episode, a seek) must not take the lock away.
     var UNLOCK_DELAY_MS = 3000;
@@ -80,7 +81,12 @@ window.AtlasPlayback = (function () {
         var w = window.innerWidth || 0, h = window.innerHeight || 0;
         try {
             if (locked) { lockView.setBounds(0, 0, w, h); }
-            else { lockView.setBounds(w - BUTTON_SIZE - BUTTON_INSET, BUTTON_INSET, BUTTON_SIZE, BUTTON_SIZE); }
+            else {
+                // Players keep Exit Fullscreen and their settings in the top right corner, and a
+                // landscape screen has room beside the picture, so the lock goes there.
+                var y = w > h ? Math.round((h - BUTTON_SIZE) / 2) : BUTTON_INSET;
+                lockView.setBounds(w - BUTTON_SIZE - BUTTON_INSET, y, BUTTON_SIZE, BUTTON_SIZE);
+            }
         } catch (e) {}
     }
 
