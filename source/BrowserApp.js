@@ -169,6 +169,9 @@ enyo.kind({
 			{name: "findMenuItem", caption: $L("Find on Page"), onclick: "showFindOnPage"},
 			{name: "readerMenuItem", caption: $L("Reading Mode"), onclick: "readerClick"},
 			{name: "privateCardItem", caption: $L("New Private Card"), onclick: "newPrivateCardClick"},
+			// The phone layout hides the action bar's bookmarks button, so the drawer is reached from here.
+			{name: "bookmarksItem", caption: $L("Bookmarks"), onclick: "bookmarksMenuClick"},
+			{name: "historyItem", caption: $L("History"), onclick: "historyMenuClick"},
 			{name: "preferencesItem", caption: $L("Preferences"), onclick: "preferencesClick"},
 			{name: "passwordsItem", caption: $L("Password Manager"), onclick: "passwordsClick"},
 			{name: "autofillItem", caption: $L("Autofill"), onclick: "autofillClick"},
@@ -1028,6 +1031,19 @@ enyo.kind({
 	showPasswords: function() {
 		this.$.radioGroup.setValue("passwords");
 		this.$.drawerPane.selectViewByName("passwords");
+	},
+	// Open bookmarks or history (toaster drawer) from the app menu. One per menu-open (double-fire guard).
+	bookmarksMenuClick: function() {
+		if (!this._menuArmed) { return; }
+		this._menuArmed = false;
+		this.$.toaster.open();
+		this.showBookmarks();
+	},
+	historyMenuClick: function() {
+		if (!this._menuArmed) { return; }
+		this._menuArmed = false;
+		this.$.toaster.open();
+		this.showHistory();
 	},
 	// Open the passwords manager (toaster drawer) from the app menu. One per menu-open (double-fire guard).
 	passwordsClick: function() {
