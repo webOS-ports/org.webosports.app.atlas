@@ -28,14 +28,21 @@ if (window.__atlasChromium) {
         return (view && view.$) ? view.$.view : null;
     }
 
+    /* Laid out and not hidden. Not offsetParent: that is null for display:none, but also for every
+     * position:fixed element, and the AppMenu is fixed - so an open menu counted as closed, the page
+     * kept painting over it and only the strip above the page (Find on Page) was seen. */
+    function laidOut(el) {
+        var st = window.getComputedStyle(el);
+        if (!st || st.display === "none") { return false; }
+        if (st.position !== "fixed" && el.offsetParent === null) { return false; }   // inside a display:none
+        var r = el.getBoundingClientRect();
+        return r.width > 0 && r.height > 0;
+    }
+
     function anyPopupVisible() {
         var els = document.querySelectorAll(".enyo-popup");
         for (var i = 0; i < els.length; i++) {
-            var el = els[i];
-            // offsetParent is null for display:none (and for anything not laid out at all)
-            if (el.offsetParent === null) { continue; }
-            var r = el.getBoundingClientRect();
-            if (r.width > 0 && r.height > 0) { return true; }
+            if (laidOut(els[i])) { return true; }
         }
         return false;
     }
@@ -55,11 +62,9 @@ if (window.__atlasChromium) {
     }
 
     function isVisible(el) {
-        if (el.offsetParent === null) { return false; }
+        if (!laidOut(el)) { return false; }
         var st = window.getComputedStyle(el);
-        if (!st || st.visibility === "hidden" || st.opacity === "0") { return false; }
-        var r = el.getBoundingClientRect();
-        return r.width > 0 && r.height > 0;
+        return st.visibility !== "hidden" && st.opacity !== "0";
     }
 
     function coveringRects(wv) {
