@@ -768,3 +768,70 @@ img.atlas-kb-button {
 	line-height: 34px;
 	white-space: nowrap;
 }
+
+/* Load error panel (source/LoadErrorView.js): the Enyo light background, a dialog-style title, the
+ * message in a Group, and Enyo buttons, stacked on a phone and in one row where there is room. */
+.atlas-load-error {
+	background-color: #d8d8d8;
+}
+
+.atlas-load-error-box {
+	-webkit-box-sizing: border-box;
+	box-sizing: border-box;
+	max-width: 600px;
+	margin: 0 auto;
+	padding: 16px 12px;
+}
+
+.atlas-load-error-title {
+	color: #4c4c4c;
+	text-shadow: #f2f2f2 0 1px 0;
+	font-size: 24px;
+	font-weight: bold;
+	padding: 8px 4px 6px;
+	word-wrap: break-word;
+}
+
+.atlas-load-error-body {
+	padding: 4px 6px;
+}
+
+.atlas-load-error-message {
+	color: #333;
+	font-size: 18px;
+	padding: 4px 0;
+	word-wrap: break-word;
+}
+
+.atlas-load-error-hint {
+	color: #555;
+	font-size: 16px;
+	padding: 4px 0;
+	word-wrap: break-word;
+}
+
+.atlas-load-error-detail {
+	color: #888;
+	font-size: 13px;
+	padding: 6px 0 2px;
+	word-wrap: break-word;
+}
+
+.atlas-load-error-buttons {
+	margin-top: 10px;
+}
+
+/* The buttons keep Enyo's own size: the Onyx button art is drawn for it, and a taller button
+ * stretches its highlight into a washed-out gradient. */
+
+/* Room for a row: the suggested action (first in the markup) goes at the end, as in Enyo dialogs. */
+@media (min-width: 560px) {
+	.atlas-load-error-buttons {
+		display: -webkit-box;
+		-webkit-box-direction: reverse;
+		-webkit-box-pack: start;
+	}
+	.atlas-load-error-button {
+		min-width: 150px;
+	}
+}

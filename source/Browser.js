@@ -31,6 +31,7 @@ function atlasWebViewConfig() {
 		onFileLoad: "doFileLoad",
 		onDownloadRequested: "engineDownloadRequested",
 		onError: "browserError",
+		onErrorCleared: "loadErrorCleared",
 		onSingleTap: "browserTap",
 		onScrolledTo: "browserScrolled",
 		onAlertDialog: "showAlertDialog",
@@ -86,6 +87,7 @@ enyo.kind({
 	components: [
 		{kind: "Control", style: "position:absolute; bottom:0px; left:0px; height:8px; width:100%; background-color:none; z-index:120;"},
 		{name: "launchApplicationService", kind: enyo.PalmService, service: enyo.palmServices.application, method: "open"},
+		{name: "launchAppByIdService", kind: enyo.PalmService, service: "palm://com.palm.applicationManager", method: "launch"},
 		{name: "importWallpaperService", kind: enyo.PalmService, service: enyo.palmServices.system, method: "wallpaper/importWallpaper", onSuccess: "importedWallpaper", onFailure: "wallpaperError"},
 		{name: "setWallpaperService", kind: enyo.PalmService, service: enyo.palmServices.system, method: "setPreferences", onFailure: "wallpaperError"},
 		{name: "actionbar", kind: "ActionBar",
@@ -105,6 +107,9 @@ enyo.kind({
 		},
 		{name: "findDialog", kind: "FindBar", showing: false, onFind: "find", onGoToPrevious: "goToPrevious", onGoToNext: "goToNext"},
 		atlasWebViewConfig(),
+		// Takes the page view's place after a failed load on the Chromium host (showLoadError).
+		{name: "loadError", kind: "LoadErrorView", flex: 1, showing: false,
+			onRetry: "loadErrorRetry", onOpenSettings: "loadErrorSettings"},
 		{kind: "FindBar", showing: false, onFind: "find", onGoToPrevious: "goToPrevious", onGoToNext: "goToNext"},
 		{name: "context", kind: "BrowserContextMenu", onItemClick: "contextItemClick"},
 		{name: "dialog", kind: "VerticalAcceptCancelPopup", cancelCaption: "", components: [
@@ -996,6 +1001,7 @@ enyo.kind({
 		this.log();
 		this.$.view.callBrowserAdapter("stopLoad");
 		this._navigating = false;
+		if (this.$.loadError.showing) { this.$.loadError.setRetrying(false); }
 		this.$.actionbar.setProgress(0);
 	},
 	loadStarted: function() {
@@ -1160,8 +1166,14 @@ enyo.kind({
 		}
 		enyo.windows.addBannerMessage(inMessage, enyo.json.stringify({dontLaunch: true}));
 	},
-	browserError: function(inSender, inErrorCode, inMsg) {
-		
+	browserError: function(inSender, inErrorCode, inMsg, inUrl) {
+		// Chromium reports net:: errors, which are negative, and has already committed its own error
+		// page into the tab: show Atlas's in its place rather than a dialog on top of it.
+		if (inErrorCode < 0) {
+			this.showLoadError(inErrorCode, inMsg, inUrl);
+			this.clearProgress();
+			return;
+		}
 		switch(inErrorCode){
 			case this.WebKitErrors.ERR_SYS_FILE_DOESNT_EXIST:
 				this.openDialog($L("Error"), $L('File does not exist.'));
@@ -1185,6 +1197,32 @@ enyo.kind({
 				
 			}
 		this.clearProgress();
+	},
+	/* The page view goes away while the panel is up: the native view is composited above the UI, so
+	 * hiding the WebView control is what stops it painting (ChromiumWebView.shouldPaint). */
+	showLoadError: function(inCode, inName, inUrl) {
+		this.$.loadError.setError(inCode, inName, inUrl || this.url);
+		if (!this.$.loadError.showing) {
+			this.hideSelectionUI();
+			this.$.view.hide();
+			this.$.loadError.show();
+		}
+	},
+	hideLoadError: function() {
+		if (this.$.loadError.showing) {
+			this.$.loadError.hide();
+			this.$.view.show();
+		}
+	},
+	loadErrorCleared: function() {
+		this.hideLoadError();
+	},
+	// Reloading an error page retries the URL that failed; the panel stays until the result is known.
+	loadErrorRetry: function() {
+		this.$.view.callBrowserAdapter("reloadPage");
+	},
+	loadErrorSettings: function(inSender, inAppId) {
+		this.$.launchAppByIdService.call({id: inAppId});
 	},
 	createPageImages: function() {
 		// The app chrome runs in LunaSysMgr's old WebKit (system OpenSSL 0.9.8) and CANNOT load remote https

@@ -49,6 +49,8 @@ enyo.kind({
         onEditorFocusChanged: "",
         onScrolledTo: "",
         onError: "",
+        // the main frame committed a real page again after an onError (see did-fail-load)
+        onErrorCleared: "",
         onDisconnected: "",
         onDownloadRequested: ""
     },
@@ -194,10 +196,18 @@ enyo.kind({
         this.inherited(arguments);
         this.syncBounds();
     },
+    /* The one rule for whether the native view paints. It sits above the UI page, so it must stop
+     * painting whenever Atlas draws something in its place: the control is hidden (Browser hides it
+     * behind its load-error panel), a popup is up (setOverlayHidden), or the tab is in the
+     * background (setEngineActive). Each of those used to set visibility from its own flag alone,
+     * so re-activating a tab could bring back a view another flag had hidden. */
+    shouldPaint: function () {
+        return !!this.showing && !this._overlayHidden && this._engineActive !== false;
+    },
     showingChanged: function () {
         this.inherited(arguments);
         if (this.pageView) {
-            try { this.pageView.setVisible(!!this.showing); } catch (e) {}
+            try { this.pageView.setVisible(this.shouldPaint()); } catch (e) {}
             if (this.showing) { this.scheduleBoundsSync(); }
         }
     },
@@ -207,15 +217,16 @@ enyo.kind({
     setOverlayHidden: function (hidden) {
         this._overlayHidden = !!hidden;
         if (!this.pageView) { return; }
-        try { this.pageView.setVisible(!hidden && !!this.showing); } catch (e) {}
+        try { this.pageView.setVisible(this.shouldPaint()); } catch (e) {}
         if (!hidden) { this.scheduleBoundsSync(); }
     },
     /* Foreground/background a whole tab (see TabLayer.js). Hiding alone would leave the page live and
      * costing memory, so a backgrounded view also suspends its DOM and media. */
     setEngineActive: function (active) {
         var pc = this.pageContents;
+        this._engineActive = !!active;
         try {
-            if (this.pageView) { this.pageView.setVisible(!!active && !this._overlayHidden); }
+            if (this.pageView) { this.pageView.setVisible(this.shouldPaint()); }
             if (window.AtlasPlayback) { setTimeout(window.AtlasPlayback.update, 0); }
             if (!pc) { return; }
             if (active) {
@@ -277,6 +288,12 @@ enyo.kind({
         });
         on("did-finish-navigation", function (navUrl) {
             self.refreshNavState();
+            // Only a non-error commit gets here (an error page arrives as did-fail-load), so the
+            // tab is showing a real page again: Retry worked, or the user went back.
+            if (self._loadError) {
+                self._loadError = false;
+                self.doErrorCleared();
+            }
             /* The event carries the url that just committed (DoEmit(kDidFinishNavigation, url), main
              * frame only). Prefer it over the pageContents url property, which reports about:blank for
              * a suspended tab and sometimes an ad frame's url for a live one. */
@@ -312,10 +329,17 @@ enyo.kind({
             }
             // NB: the address bar is driven by onPageUrl (main frame only), not from here.
         });
+        /* Fires for two things: the main frame committing the runtime's network error page
+         * (PageContents::DidFinishNavigation, IsErrorPage), and a committed document whose load then
+         * failed (WebContentsObserver::DidFailLoad). The second is nearly always ERR_ABORTED: the user
+         * pressed stop, or navigated on before the page finished. The page is still there and still
+         * usable, so that is no error to show. */
         on("did-fail-load", function (url, isMainFrame, error, errorCode) {
             self.loading = false;
             if (isMainFrame === false) { return; }      // subresource failure is not a page error
-            self.doError(errorCode, error, url);
+            if (Number(errorCode) === -3) { return; }  // net::ERR_ABORTED, see above
+            self._loadError = true;
+            self.doError(errorCode, self.readString(error) || "", self.readString(url) || "");
         });
         /* The shell emits newwindow with TWO arguments: a PageContents handle for the popup it has
          * already created, and a windowInfo record. The URL lives on the SECOND one
