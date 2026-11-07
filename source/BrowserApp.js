@@ -978,7 +978,7 @@ enyo.kind({
 	helpClick: function() {
 		if (!this._menuArmed) { return; }   // AppMenu double-fire -> would launch help twice
 		this._menuArmed = false;
-		this.$.launchApplicationService.call({params: {target: "http://help.palm.com/web/index.html"}, id: "com.palm.app.help"});
+		this.$.launchApplicationService.call({params: {target: "https://help.luneos.org/web/index.html"}, id: "com.palm.app.help"});
 	},
 	// CSV importer trigger: read a Chrome/Google Password Manager export from
 	// /media/internal/atlas-logins.csv and bulk-insert it into the logins store.
