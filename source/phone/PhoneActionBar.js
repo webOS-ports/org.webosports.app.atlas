@@ -153,7 +153,8 @@ enyo.kind({
      * to showing the title, which is where 2.2.4 landed too. Deferred a beat: the blur that arrives
      * when the suggestion list is tapped would otherwise tear the field down before the tap lands. */
     phoneInputBlurred: function() {
-        this.doAddressInputBlurred();
+        // Nothing is forwarded: no owner listens for a blur on this bar, and ActionBar declares no
+        // onAddressInputBlurred, so a doAddressInputBlurred() here threw and the job below never ran.
         enyo.job(this.id + "phoneExitEdit", enyo.bind(this, function () {
             if (this._editing && !this.$.search.$.address.hasFocus()) { this.exitEditMode(); }
         }), 250);
