@@ -1016,11 +1016,15 @@ enyo.kind({
                 try { pc.setAcceptCookies(!!a[0]); } catch (e) {}
             } else { this.unsupported(inMethod); }
             break;
-        /* Still no engine equivalent even with the patch: print needs a whole printing stack that
-         * neva does not build, and Atlas's marker-based selection needs selectionBounds reporting. */
+        /* The PrintDialog's render step: [frame, jobID, width, height, pixelUnits, landscape,
+         * reverse, params] - Browser.printFrame adds the job's whole params at the end. */
+        case "printFrame":
+            this.printPage(a[1], a[7] || { rawWidth: a[2], rawHeight: a[3], pixelUnits: a[4] });
+            break;
+        /* Still no engine equivalent even with the patch: Atlas's marker-based selection needs
+         * selectionBounds reporting. */
         case "setAutoplayWithSound":
         case "ignoreMetaRefreshTags":
-        case "printFrame":
         // Atlas's own marker/popover selection UI is fed by the WPE backend's selectionBounds messages,
         // which have no counterpart here.
         case "extendSelectionTo":
@@ -1049,6 +1053,64 @@ enyo.kind({
         if (this._warned[name]) { return; }
         this._warned[name] = true;
         enyo.log("[Atlas] chromium engine: '" + name + "' has no browser_shell equivalent — ignored");
+    },
+
+    /* Printing. The PrintDialog has opened the job (jobs/open, editPrintParams) and asks for its
+     * pages with the job's final params, in pixels at pixelUnits per inch. The engine prints the page
+     * as a PDF on that paper (pageContents.printToPDF, a LuneOS engine addition), which becomes the
+     * job's one file; the render status then tells the dialog the job may close. The print service
+     * reads the file when it sends the job, so it is not removed here: the engine keeps its PDFs for
+     * an hour. */
+    printPage: function (inJobID, inParams) {
+        var self = this, p = inParams || {}, pc = this.pageContents;
+        var done = function (inCode, inText) {
+            self.printCall("jobs/setRenderStatus", { jobID: inJobID, renderResultCode: inCode, renderResultText: inText || "" });
+        };
+        if (!pc || typeof pc.printToPDF !== "function") {
+            enyo.log("[Atlas] chromium engine: printToPDF is not in this engine");
+            done(-703, "This browser engine cannot print");
+            return;
+        }
+        try {
+            pc.printToPDF(this.printOptions(p), function (inPath, inError) {
+                if (!inPath) {
+                    enyo.log("[Atlas] printToPDF failed: " + inError);
+                    done(-703, inError);
+                    return;
+                }
+                self.printCall("jobs/addFile", { jobID: inJobID, pathName: inPath, currentPage: 1, totalPages: 1 }, function (inReply) {
+                    if (inReply && inReply.returnValue) { done(0); }
+                    else { done(inReply && inReply.errorCode || -703, inReply && inReply.errorText); }
+                });
+            });
+        } catch (e) {
+            done(-703, String(e));
+        }
+    },
+    /* The job's paper and margins in inches, as printToPDF takes them. raw* is the sheet less the
+     * printer's own margins (page*Margin); an inset is measured from the edge of the sheet and is
+     * never less than that margin. */
+    printOptions: function (p) {
+        var units = p.pixelUnits > 0 ? p.pixelUnits : 0, o = { printBackground: false };
+        var margin = function (inInset, inPage) { return Math.max(+inInset || 0, +inPage || 0); };
+        if (units && p.rawWidth > 0 && p.rawHeight > 0) {
+            o.paperWidth = p.rawWidth / units + (+p.pageLeftMargin || 0) + (+p.pageRightMargin || 0);
+            o.paperHeight = p.rawHeight / units + (+p.pageTopMargin || 0) + (+p.pageBottomMargin || 0);
+            o.marginTop = margin(p.topInset, p.pageTopMargin);
+            o.marginBottom = margin(p.bottomInset, p.pageBottomMargin);
+            o.marginLeft = margin(p.leftInset, p.pageLeftMargin);
+            o.marginRight = margin(p.rightInset, p.pageRightMargin);
+        }
+        return o;
+    },
+    printCall: function (inMethod, inParams, inCallback) {
+        var bridge = new window.PalmServiceBridge();
+        bridge.onservicecallback = function (inMessage) {
+            var reply = null;
+            try { reply = JSON.parse(inMessage); } catch (e) {}
+            if (inCallback) { inCallback(reply); }
+        };
+        bridge.call("luna://com.palm.printmgr/" + inMethod, JSON.stringify(inParams));
     },
 
     /* Card thumbnails. captureVisibleRegion is asynchronous here, where the NPAPI call was synchronous

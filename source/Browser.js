@@ -216,7 +216,13 @@ enyo.kind({
 	},
 	//* @public
 	printFrame: function(inJobID, inPrintParams) {
-		this.viewCall("printFrame", ["", inJobID, inPrintParams.width, inPrintParams.height, inPrintParams.pixelUnits, false, inPrintParams.renderInReverseOrder]);
+		var args = ["", inJobID, inPrintParams.width, inPrintParams.height, inPrintParams.pixelUnits, false, inPrintParams.renderInReverseOrder];
+		// The Chromium engine prints a PDF and needs the whole params (paper, margins). The WPE
+		// plugin's printFrame takes the seven above only, so it is not given more.
+		if (window.__atlasChromium) {
+			args.push(inPrintParams);
+		}
+		this.viewCall("printFrame", args);
 	},
 	showFind: function() {
 		//this.$.findBar.show();
