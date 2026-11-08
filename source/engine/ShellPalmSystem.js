@@ -155,6 +155,56 @@
     // than into whatever page the launch target loaded.
     setTimeout(focusUiPage, 1200);
 
+    function guessedLocale() {
+        return (navigator.language || "en-US").replace(/-/g, "_").toLowerCase();
+    }
+
+    /* The system's language and regions from systemservice's preferences, as WAM gives them to a web
+     * app: locale "en_us" (the language, and the country it is spoken in), localeRegion "nl" (the
+     * region the formats follow - dates, numbers, and the paper a document is printed on) and
+     * phoneRegion. The two regions need not be the language's country: English with Dutch formats
+     * prints on A4. null when the reply has no language. */
+    function systemLocale(inPrefs) {
+        var l = inPrefs && inPrefs.locale, r = inPrefs && inPrefs.region;
+        var lang = l && typeof l.languageCode === "string" ? l.languageCode.toLowerCase() : "";
+        if (!lang) { return null; }
+        var country = typeof l.countryCode === "string" ? l.countryCode.toLowerCase() : "";
+        var region = r && typeof r.countryCode === "string" && r.countryCode ? r.countryCode.toLowerCase() : country;
+        var phone = l.phoneRegion && typeof l.phoneRegion.countryCode === "string" && l.phoneRegion.countryCode ?
+            l.phoneRegion.countryCode.toLowerCase() : region;
+        return { locale: country ? lang + "_" + country : lang, localeRegion: region, phoneRegion: phone };
+    }
+
+    /* Puts the system's locale in place, and into Enyo's g11n if it has already read the guess (it
+     * reads PalmSystem once, when first asked). Follows changes made in Settings. */
+    var localeBridge = null;
+    function followSystemLocale() {
+        if (!window.PalmServiceBridge) { return; }
+        localeBridge = new window.PalmServiceBridge();
+        localeBridge.onservicecallback = function (inReply) {
+            var loc = null;
+            try { loc = systemLocale(JSON.parse(inReply)); } catch (e) {}
+            if (!loc) { return; }
+            if (loc.locale === PalmSystem.locale && loc.localeRegion === PalmSystem.localeRegion &&
+                    loc.phoneRegion === PalmSystem.phoneRegion) { return; }
+            PalmSystem.locale = loc.locale;
+            PalmSystem.localeRegion = loc.localeRegion;
+            PalmSystem.phoneRegion = loc.phoneRegion;
+            var g = window.enyo && window.enyo.g11n;
+            if (g && g._initialized && typeof g.setLocale === "function") {
+                var lang = loc.locale.split("_")[0];
+                try {
+                    g.setLocale({ uiLocale: loc.locale, formatLocale: lang + "_" + loc.localeRegion,
+                                  phoneLocale: lang + "_" + loc.phoneRegion });
+                } catch (e2) {}
+            }
+        };
+        try {
+            localeBridge.call("luna://com.webos.service.systemservice/getPreferences",
+                JSON.stringify({ keys: ["locale", "region"], subscribe: true }));
+        } catch (e3) {}
+    }
+
     var PalmSystem = {
         // --- identity / launch -------------------------------------------------------------------
         identifier: launchArgs.appId || launchArgs.nid || "org.webosports.app.atlas",
@@ -224,9 +274,11 @@
         simulateMouseClick: noop,
 
         // --- locale / misc -----------------------------------------------------------------------
-        locale: (navigator.language || "en-US"),
-        localeRegion: (navigator.language || "en-US").split("-")[1] || "US",
-        phoneRegion: "",
+        // In WAM's form ("en_us", "nl"). Only a first guess from the engine's language: the system's
+        // own are asked for below (systemLocale).
+        locale: guessedLocale(),
+        localeRegion: guessedLocale().split("_")[1] || "us",
+        phoneRegion: guessedLocale().split("_")[1] || "us",
         timeFormat: "HH12",
         TZ: (function () {
             try { return Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC"; } catch (e) { return "UTC"; }
@@ -253,6 +305,7 @@
     }, false);
 
     window.PalmSystem = PalmSystem;
+    followSystemLocale();
     // WAM injects both names and some framework/app code reads the modern one; keep them the same
     // object so a write through either is visible to the other.
     if (!window.webOSSystem) { window.webOSSystem = PalmSystem; }
