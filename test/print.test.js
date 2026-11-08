@@ -121,6 +121,40 @@ test("an engine without printToPDF fails the render instead of leaving the dialo
 	assert.strictEqual(renderStatus(calls)[0].renderResultCode, -703);
 });
 
+// The app's Print menu item: the job is named after the page.
+function browserAppPrintClick(browser) {
+	const kinds = {};
+	const noop = () => {};
+	const sandbox = {
+		$L: (s) => s,
+		enyo: new Proxy({ kind: (def) => { kinds[def.name] = def; } }, { get: (t, k) => (k in t ? t[k] : noop) }),
+	};
+	sandbox.window = sandbox;
+	vm.createContext(sandbox);
+	vm.runInContext(fs.readFileSync(path.join(__dirname, "..", "source", "BrowserApp.js"), "utf8"), sandbox);
+	const named = [];
+	let opened = 0;
+	const self = Object.assign(Object.create(kinds["enyo.BrowserApp"]), {
+		_menuArmed: true,
+		$: {
+			browser: browser,
+			printDialog: { setDescription: (d) => named.push(d), openAtCenter: () => { opened++; } },
+		},
+	});
+	self.printClick();
+	return { named: named, opened: opened };
+}
+
+test("the print job is named after the page's title", async () => {
+	assert.deepStrictEqual(browserAppPrintClick({ title: "webOS - Wikipedia", url: "https://en.wikipedia.org/wiki/WebOS" }),
+		{ named: ["webOS - Wikipedia"], opened: 1 });
+});
+
+test("a page with no title names the job by its address", async () => {
+	assert.deepStrictEqual(browserAppPrintClick({ title: "", url: "https://example.com/a.txt" }),
+		{ named: ["https://example.com/a.txt"], opened: 1 });
+});
+
 Promise.all(pending).then(() => {
 	if (failed) {
 		console.log(failed + " failed");

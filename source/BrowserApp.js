@@ -816,6 +816,10 @@ enyo.kind({
 	printClick: function() {
 		if (!this._menuArmed) { return; }   // AppMenu double-fire -> would open two print dialogs
 		this._menuArmed = false;
+		// The job's name in the print queue and on the dashboard: the page's title, or its
+		// address when it has none. Without one the job had no name at all.
+		var b = this.$.browser;
+		this.$.printDialog.setDescription((b && (b.title || b.url)) || "");
 		this.$.printDialog.openAtCenter();
 	},
 	renderDocument: function(inSender, inJobID, inPrintParams) {
